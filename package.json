@@ -1,0 +1,34 @@
+{
+  "name": "roblox-rtc",
+  "version": "1.0.0",
+  "description": "A Roblox real-time communication module between a Roblox game server and your own server.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/littleBitsman/roblox-rtc.git"
+  },
+  "keywords": [
+    "roblox",
+    "realtime",
+    "communication",
+    "backend",
+    "server"
+  ],
+  "author": "littleBitsman",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/littleBitsman/roblox-rtc/issues"
+  },
+  "homepage": "https://github.com/littleBitsman/roblox-rtc#readme",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2"
+  }
+}
