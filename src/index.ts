@@ -1,3 +1,8 @@
-import express from "express"
+import { Server } from "./server";
 
-const app = express()
+export = {
+    function() {
+        return new Server()
+    },
+    Server: Server
+}
