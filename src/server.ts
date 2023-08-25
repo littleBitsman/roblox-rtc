@@ -25,20 +25,36 @@ export class Server {
         const universeId = options.universeId
         const key = options.robloxApiKey
         axios.get(`https://develop.roblox.com/v1/universes/${universeId}`).catch(() => {
-            throw new Error('Invalid universeId.') 
+            throw new Error('Invalid universeId.')
         })
-        axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunications-Test`, 
-            { message: 'none' }, 
-            { headers: { 'x-api-key': key, 'Content-Type': 'application/json' }
-        }).catch((res) => {
-            if (res.status == 401) throw new Error('Invalid API key.')
-        })
+        axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunications-Test`,
+            { message: 'none' },
+            {
+                headers: { 'x-api-key': key, 'Content-Type': 'application/json' }
+            }).catch((res) => {
+                if (res.response.status == 401) throw new Error('Invalid API key.')
+            })
         const app = this.app
+        const session = require('express-session')
+
+        app.use(session({
+            store: new (require('memorystore')(session))({ ttl: Number.MAX_SAFE_INTEGER }),
+            secret: require('node:crypto').randomUUID(),
+            cookie: { secure: true },
+            resave: false,
+            saveUninitialized: false
+        }))
+        
         app.get('/apikey', async (_, res) => {
             await axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunications-Data`, { message: JSON.stringify({ ApiKey: `` }) }, {
                 headers: { 'x-api-key': key, 'Content-Type': 'application/json' }
             })
             res.sendStatus(204)
+        })
+        app.get('/connect', async (req, res) => {
+            const JobId = req.get('Roblox-JobId')
+            const PlaceId = req.get('Roblox-PlaceId')
+            if (req.get('API-Key') != key) return res.sendStatus(401)
         })
     }
 
