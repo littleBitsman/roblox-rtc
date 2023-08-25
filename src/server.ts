@@ -1,5 +1,6 @@
 import express from 'express'
 import axios from 'axios'
+import session from 'express-session'
 import { EventEmitter } from 'node:events'
 import { Connection } from './connection'
 
@@ -35,8 +36,6 @@ export class Server {
                 if (res.response.status == 401) throw new Error('Invalid API key.')
             })
         const app = this.app
-        const session = require('express-session')
-
         app.use(session({
             store: new (require('memorystore')(session))({ ttl: Number.MAX_SAFE_INTEGER }),
             secret: require('node:crypto').randomUUID(),
@@ -44,7 +43,7 @@ export class Server {
             resave: false,
             saveUninitialized: false
         }))
-        
+
         app.get('/apikey', async (_, res) => {
             await axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunications-Data`, { message: JSON.stringify({ ApiKey: `` }) }, {
                 headers: { 'x-api-key': key, 'Content-Type': 'application/json' }
@@ -52,9 +51,18 @@ export class Server {
             res.sendStatus(204)
         })
         app.get('/connect', async (req, res) => {
-            const JobId = req.get('Roblox-JobId')
-            const PlaceId = req.get('Roblox-PlaceId')
             if (req.get('API-Key') != key) return res.sendStatus(401)
+            const JobId = req.get('Roblox-JobId')
+            if (!JobId) return res.sendStatus(400)
+            const PlaceId = req.get('Roblox-PlaceId')
+            if (!PlaceId) return res.sendStatus(400)
+            this.emit('connection', new Connection({
+                JobId: JobId,
+                PlaceId: Number.parseFloat(PlaceId),
+                SessionId: req.sessionID,
+                SessionStore: req.sessionStore
+            }))
+            res.sendStatus(204)
         })
     }
 
