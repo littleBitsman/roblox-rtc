@@ -1,37 +1,59 @@
-import { Express } from 'express'
 import { EventEmitter } from 'node:events'
+import { SessionData } from 'express-session'
 import { Server } from './server'
+import { randomUUID } from 'node:crypto'
 
 interface ConnectionOpts {
     JobId: string,
-    PlaceId: number,
+    PlaceId: string,
     SessionId: string,
-    Server: Server
+    Server: Server,
+    id: string,
+    GetSession: (id: string) => SessionData | undefined,
+    DataStream: EventEmitter
+}
+
+export interface InternalData {
+    players: string[]
 }
 
 export class Connection {
     private eventStream = new EventEmitter()
     readonly JobId: string
-    readonly PlaceId: number
+    readonly PlaceId: string
+    readonly Server: Server
     private readonly SessionId: string
-    private static SessionStore: Express.SessionStore
+    readonly id: string
+    readonly secret: string = randomUUID().replace('-', '')
+    private readonly getSessionData: (id: string) => SessionData | undefined
     private customData: object | undefined = {}
+    private Players: string[] = []
     constructor(opts: ConnectionOpts) {
         this.JobId = opts.JobId
         this.PlaceId = opts.PlaceId
         this.SessionId = opts.SessionId
+        this.id = opts.id
+        this.Server = opts.Server
+        this.getSessionData = opts.GetSession
+        opts.DataStream.on('data', (data: object) => {
+            this.emit('message', data)
+        })
+        opts.DataStream.on('internalData', (data: InternalData) => {
+            this.Players = data.players
+        })
+        opts.DataStream.on('close', () => {
+            this.emit('close')
+        })
     }
 
     /**
      * Get the session data for this Connection.
      */
-    get session(): unknown {
-        var a
-        Connection.SessionStore.get(this.SessionId, (_, session) => {
-            a = session
-        })
-        return a
+    get session() {
+        return this.getSessionData(this.SessionId)
     }
+
+    get players() { return this.Players }
 
     /**
      * Get custom data for this Connection. You can set custom data with `connection.setCustomData()`.
@@ -45,6 +67,17 @@ export class Connection {
      */
     set setCustomData(newData: object | undefined) {
         this.customData = newData
+    }
+
+    /**
+     * Send data to the server represented by this object. *Note: The* `jobId` *and* `placeId` *are handled for you.*
+     * @param data The data to send.
+     */
+    async send(data: object) {
+        return this.Server.send(data, {
+            jobId: this.JobId,
+            placeId: this.PlaceId
+        })
     }
 
     /**

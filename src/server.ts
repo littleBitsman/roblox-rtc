@@ -2,6 +2,8 @@ import express from 'express'
 import axios, { AxiosResponse } from 'axios'
 import session from 'express-session'
 import memorystore from 'memorystore'
+import { Collection } from '@discordjs/collection'
+const store = memorystore(session)
 import crypto from 'node:crypto'
 import { Server as httpServer } from 'node:http'
 import { EventEmitter } from 'node:events'
@@ -9,6 +11,25 @@ import { Connection } from './connection'
 
 function assert(bool?: boolean, message: string = 'assertion failed!'): void | never {
     if (!bool) throw message
+}
+
+function stringSafeEqual(a: string, b: string) {
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b))
+}
+
+function calculateHmacKey(connection: Connection) {
+    return `${connection.secret}-${connection.PlaceId}-${connection.JobId}`
+}
+
+function isValidJsonString(obj?: any): boolean {
+    if (!obj) return false
+    if (typeof obj != 'string') return false
+    try {
+        JSON.parse(obj)
+        return true
+    } catch {
+        return false
+    }
 }
 
 interface ServerOptions {
@@ -31,7 +52,7 @@ interface DataSendOptions {
      * Adds a filter to the request to Roblox such that only the server with this `placeId` will get the message. 
      * *WARNING: If you specify the wrong place ID and you specify a job ID, the message may not be received by the server. The logic on the Roblox game server side checks BOTH place ID (if the filter exists) and job ID (if the filter exists).*
      */
-    placeId?: number,
+    placeId?: string,
     /**
      * Adds a filter to the request to Roblox such that only the server with this `jobId` will get the message.
      */
@@ -51,10 +72,12 @@ function makeKey(length: number = 16) {
 export class Server {
     readonly app = express()
     private eventStream = new EventEmitter()
-    private readonly Connections: Map<string, Connection> = new Map()
+    private readonly Connections: Collection<string, Connection> = new Collection()
+    private readonly Streams: Collection<string, EventEmitter> = new Collection()
     private readonly universeId: number
     private readonly robloxApiKey: string
     private readonly serverApiKey: string
+    private readonly sessionStore: session.MemoryStore
     constructor(options: ServerOptions) {
         const universeId = options.universeId
         const key = options.robloxApiKey
@@ -74,8 +97,9 @@ export class Server {
             .catch((res) => {
                 if (res.response.status == 401 || res.response.status == 403) throw new Error('Invalid API key.')
             })
+        this.sessionStore = new store({ ttl: Number.MAX_SAFE_INTEGER })
         this.app.use(session({
-            store: new (memorystore(session))({ ttl: Number.MAX_SAFE_INTEGER }),
+            store: this.sessionStore,
             secret: crypto.randomUUID(),
             cookie: { secure: true },
             resave: false,
@@ -99,15 +123,69 @@ export class Server {
 
             const PlaceId = req.get('Roblox-PlaceId')
             if (!PlaceId) return res.sendStatus(400)
+            const stream = new EventEmitter()
             const conn = new Connection({
                 JobId: JobId,
-                PlaceId: Number.parseFloat(PlaceId),
+                PlaceId: PlaceId,
                 SessionId: req.sessionID,
-                Server: this
+                Server: this,
+                id: this.Connections.size.toString(),
+                GetSession: (id) => {
+                    var a
+                    this.sessionStore.get(id, (_, b) => {
+                        a = b
+                    })
+                    return a
+                },
+                DataStream: stream
             })
+            this.Connections.set(JobId, conn)
             this.emit('connection', conn)
-            res.sendStatus(204)
+            res.status(200).json({
+                secret: conn.secret,
+                id: conn.id
+            })
         })
+        this.app.post('/servers/:serverId/internalData', (req, res) => {
+            const __a = this.validateRequest(req)
+            if (__a != true) return res.sendStatus(__a)
+            if (!req.get('data-type') || req.get('data-type') != 'internal') return res.sendStatus(400)
+            const serverId = req.params.serverId
+            const connection = this.Connections.find((v) => v.id == serverId)
+            if (!connection) return res.sendStatus(404)
+            this.Streams.find((_, k) => k == connection.JobId)!.emit('internalData', req.body.data)
+        })
+        this.app.post('/servers/:serverId/data', (req, res) => {
+            const __a = this.validateRequest(req)
+            if (__a != true) return res.sendStatus(__a)
+            const serverId = req.params.serverId
+            const connection = this.Connections.find((v) => v.id == serverId)
+            if (!connection) return res.sendStatus(404)
+            this.Streams.find((_, k) => k == connection.JobId)!.emit('data', req.body.data)
+        })
+        this.app.post('/servers/:serverId/close', (req, res) => {
+            const __a = this.validateRequest(req)
+            if (__a != true) return res.sendStatus(__a)
+        })
+    }
+
+    private validateRequest(req: express.Request) {
+        if (!stringSafeEqual(req.get('API-Key')!, this.serverApiKey)) return 401
+
+        const conn = this.Connections.find((conn) => conn.id == req.params['serverId'])
+        if (!conn) return 404
+
+        if (req.body) {
+            if (!req.get('data-signature')) return 401
+            const headerHash = req.get('data-signature')!.split('=')[1]!
+            const calcHash = crypto.createHmac('sha256', calculateHmacKey(conn)!).update(JSON.stringify(req.body)).digest()
+            if (!crypto.timingSafeEqual(Buffer.from(headerHash, 'hex'), calcHash)) return 401
+        }
+
+        if (!stringSafeEqual(req.get('Roblox-JobId')!, conn.JobId)) return 401
+        if (!stringSafeEqual(req.get('Roblox-PlaceId')!, conn.PlaceId)) return 401
+
+        return true
     }
 
     on(event: 'connection', callback: (connection: Connection) => void) {
@@ -145,9 +223,10 @@ export class Server {
      * Options:
      * @param options.jobId Adds a filter to the request to Roblox such that only the game server where `game.JobId == jobId` will get the message.
      * @param options.placeId Adds a filter to the request to Roblox such that only game servers where `game.PlaceId == placeId` will get the message. 
-     * *WARNING: If you specify the wrong place ID and you specify a job ID, the message may not be received by the server. The logic on the Roblox game server side checks BOTH place ID (if the filter exists) and job ID (if the filter exists).*
+     * *WARNING: If you specify the wrong place ID and you specify a job ID, the message may not be received by the server you intended. The logic on the Roblox game server side checks BOTH place ID (if the filter exists) and job ID (if the filter exists).*
      */
     async send(data: any, options?: DataSendOptions) {
+        if (isValidJsonString(data)) data = JSON.parse(data)
         if (data['ApiKey']) delete data.ApiKey
         const json = { data: data }
         if (options) {
