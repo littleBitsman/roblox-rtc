@@ -102,7 +102,7 @@ export class Server {
         this.app.use(session({
             store: this.sessionStore,
             secret: crypto.randomUUID(),
-            cookie: { secure: true },
+            cookie: { secure: false },
             resave: false,
             saveUninitialized: false
         }))
@@ -111,7 +111,7 @@ export class Server {
             await axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunicationsData`, { message: JSON.stringify({ ApiKey: serverKey }) }, {
                 headers: { 'x-api-key': key, 'Content-Type': 'application/json' }
             })
-            res.sendStatus(204)
+            res.sendStatus(200)
         })
         this.app.get('/connect', async (req, res) => {
             if (req.get('API-Key') != key) return res.sendStatus(401)
