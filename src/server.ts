@@ -93,7 +93,7 @@ export class Server {
         })
         axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunications-Test`,
             { message: 'none' },
-            { headers: { 'x-api-key': key, 'Content-Type': 'text/plain' } })
+            { headers: { 'x-api-key': key, 'Content-Type': 'application/json' } })
             .catch((res) => {
                 if (res.response.status == 401 || res.response.status == 403) throw new Error('Invalid API key.')
             })
@@ -108,7 +108,7 @@ export class Server {
 
         this.app.get('/apikey', async (_, res) => {
             await axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunications-Data`, { message: JSON.stringify({ ApiKey: serverKey }) }, {
-                headers: { 'x-api-key': key, 'Content-Type': 'text/plain' }
+                headers: { 'x-api-key': key, 'Content-Type': 'application/json' }
             })
             res.sendStatus(204)
         })
@@ -248,7 +248,7 @@ export class Server {
         return await new Promise((resolve) => {
             axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${this.universeId}/topics/RealTimeCommunications-Data`,
                 { message: data },
-                { headers: { 'x-api-key': this.robloxApiKey, 'Content-Type': 'text/plain' } })
+                { headers: { 'x-api-key': this.robloxApiKey, 'Content-Type': 'application/json' } })
             .then((res) => {
                 resolve(res)
             })
