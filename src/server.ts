@@ -91,7 +91,7 @@ export class Server {
         axios.get(`https://develop.roblox.com/v1/universes/${universeId}`).catch(() => {
             throw new Error('Invalid universeId.')
         })
-        axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunications-Test`,
+        axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunicationsTest`,
             { message: 'none' },
             { headers: { 'x-api-key': key, 'Content-Type': 'application/json' } })
             .catch((res) => {
@@ -107,7 +107,7 @@ export class Server {
         }))
 
         this.app.get('/apikey', async (_, res) => {
-            await axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunications-Data`, { message: JSON.stringify({ ApiKey: serverKey }) }, {
+            await axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunicationsData`, { message: JSON.stringify({ ApiKey: serverKey }) }, {
                 headers: { 'x-api-key': key, 'Content-Type': 'application/json' }
             })
             res.sendStatus(204)
@@ -246,7 +246,7 @@ export class Server {
 
     private async sendData(data: string): Promise<AxiosResponse> {
         return await new Promise((resolve) => {
-            axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${this.universeId}/topics/RealTimeCommunications-Data`,
+            axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${this.universeId}/topics/RealTimeCommunicationsData`,
                 { message: data },
                 { headers: { 'x-api-key': this.robloxApiKey, 'Content-Type': 'application/json' } })
             .then((res) => {
