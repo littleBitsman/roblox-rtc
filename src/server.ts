@@ -36,7 +36,7 @@ interface ServerOptions {
     /**
      * The ID of the **universe** (also known as **game**, contains multiple **places**). Required for functionality.
      */
-    universeId: number,
+    universeId: string,
     /**
      * The API key to authenticate with the Roblox OpenCloud API. Required for functionality.
      */
@@ -74,7 +74,7 @@ export class Server {
     private eventStream = new EventEmitter()
     private readonly Connections: Collection<string, Connection> = new Collection()
     private readonly Streams: Collection<string, EventEmitter> = new Collection()
-    private readonly universeId: number
+    private readonly universeId: string
     private readonly robloxApiKey: string
     private readonly serverApiKey: string
     private readonly sessionStore: session.MemoryStore
