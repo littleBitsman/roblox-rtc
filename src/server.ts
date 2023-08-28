@@ -89,13 +89,14 @@ export class Server {
         this.serverApiKey = serverKey
 
         axios.get(`https://develop.roblox.com/v1/universes/${universeId}`).catch(() => {
-            throw new Error('Invalid universeId.')
+            throw 'Invalid universeId.'
         })
         axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunicationsTest`,
             { message: 'none' },
             { headers: { 'x-api-key': key, 'Content-Type': 'application/json' } })
             .catch((res) => {
-                if (res.response.status == 401 || res.response.status == 403) throw new Error('Invalid API key.')
+                if (res.response.status == 401) throw 'Invalid API key.'
+                if (res.response.status == 403) throw `This API key does not have permissions to publish to Messaging Service on universe ${universeId}.`
             })
         this.sessionStore = new store({ ttl: Number.MAX_SAFE_INTEGER })
         this.app.use(session({
