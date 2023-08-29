@@ -81,6 +81,7 @@ export class Server {
     constructor(options: ServerOptions) {
         const universeId = options.universeId
         const key = options.robloxApiKey
+        console.log(key)
         if (!options.serverKey) options.serverKey = makeKey(64)
         const serverKey = options.serverKey
 
@@ -114,6 +115,7 @@ export class Server {
             res.status(200).send()
         })
         this.app.get('/connect', async (req, res) => {
+            console.log(req.get('API-Key'))
             if (req.get('API-Key') != key) return res.sendStatus(401)
             const JobId = req.get('Roblox-JobId')
             if (!JobId) return res.sendStatus(400)
