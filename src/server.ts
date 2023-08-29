@@ -82,7 +82,7 @@ export class Server {
         const universeId = options.universeId
         const key = options.robloxApiKey
         if (!options.serverKey) options.serverKey = makeKey(64)
-        const serverKey = options.serverKey
+        const serverKey = options.serverKey.trim()
         console.log(serverKey)
 
         this.universeId = universeId
@@ -115,9 +115,7 @@ export class Server {
             res.status(200).send()
         })
         this.app.get('/connect', async (req, res) => {
-            console.log(req.get('API-Key'))
-            console.log(req.get('API-Key') == key)
-            if (req.get('API-Key') != key) return res.sendStatus(401)
+            if (req.get('API-Key')?.trim() != key) return res.sendStatus(401)
             const JobId = req.get('Roblox-JobId')
             if (!JobId) return res.sendStatus(400)
             if (this.Connections.has(JobId)) return res.status(403).json({
