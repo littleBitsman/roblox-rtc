@@ -83,7 +83,6 @@ export class Server {
         const key = options.robloxApiKey
         if (!options.serverKey) options.serverKey = makeKey(64)
         const serverKey = options.serverKey.trim()
-        console.log(serverKey)
 
         this.universeId = universeId
         this.robloxApiKey = key
