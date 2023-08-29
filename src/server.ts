@@ -141,6 +141,7 @@ export class Server {
                 DataStream: stream
             })
             this.Connections.set(JobId, conn)
+            this.Streams.set(JobId, stream)
             this.emit('connection', conn)
             res.status(200).json({
                 secret: conn.secret,
