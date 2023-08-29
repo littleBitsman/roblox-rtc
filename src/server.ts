@@ -13,7 +13,10 @@ function assert(bool?: boolean, message: string = 'assertion failed!'): void | n
     if (!bool) throw message
 }
 
-function stringSafeEqual(a: string, b: string) {
+function stringSafeEqual(a?: string, b?: string) {
+    if (!a || !b) return false
+    a = a.trim()
+    b = b.trim()
     try {
         return crypto.timingSafeEqual(Buffer.from(a, 'utf8'), Buffer.from(b, 'utf8'))
     } catch {
@@ -117,7 +120,7 @@ export class Server {
             })
             res.status(200).send()
         })
-        this.app.get('/connect', async (req, res) => {
+        this.app.post('/connect', async (req, res) => {
             if (req.get('API-Key')?.trim() != serverKey) return res.sendStatus(401)
             const JobId = req.get('Roblox-JobId')
             if (!JobId) return res.sendStatus(400)
@@ -144,6 +147,9 @@ export class Server {
                 },
                 DataStream: stream
             })
+            req.session['JobId'] = JobId
+            req.session['PlaceId'] = PlaceId
+            req.session['ServerId'] = conn.id
             this.Connections.set(JobId, conn)
             this.Streams.set(JobId, stream)
             this.emit('connection', conn)
@@ -172,11 +178,13 @@ export class Server {
         this.app.post('/servers/:serverId/close', (req, res) => {
             const __a = this.validateRequest(req)
             if (__a != true) return res.sendStatus(__a)
+
         })
+
     }
 
     private validateRequest(req: express.Request) {
-        if (!stringSafeEqual(req.get('API-Key')!.trim(), this.serverApiKey)) return 401
+        if (!stringSafeEqual(req.get('API-Key'), this.serverApiKey)) return 401
 
         const conn = this.Connections.find((conn) => conn.id == req.params['serverId'])
         if (!conn) return 404
@@ -188,8 +196,9 @@ export class Server {
             if (!crypto.timingSafeEqual(Buffer.from(headerHash, 'hex'), calcHash)) return 401
         }
 
-        if (!stringSafeEqual(req.get('Roblox-JobId')!, conn.JobId)) return 401
-        if (!stringSafeEqual(req.get('Roblox-PlaceId')!, conn.PlaceId)) return 401
+        if (!stringSafeEqual(req.get('Roblox-JobId'), conn.JobId) || !stringSafeEqual(req.get('Roblox-JobId'), req.session['JobId'])) return 401
+        if (!stringSafeEqual(req.get('Roblox-PlaceId'), conn.PlaceId) || !stringSafeEqual(req.get('Roblox-PlaceId'), req.session['PlaceId'])) return 401
+        if (req.session['ServerId'] != conn.id) return 401
 
         return true
     }
