@@ -108,6 +108,7 @@ export class Server {
         }))
 
         this.app.get('/apikey', async (_, res) => {
+            console.log('hi')
             await axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunicationsData`, { message: JSON.stringify({ ApiKey: serverKey }) }, {
                 headers: { 'x-api-key': key, 'Content-Type': 'application/json' }
             })
