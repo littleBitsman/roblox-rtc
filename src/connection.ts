@@ -35,8 +35,8 @@ export class Connection {
         this.id = opts.id
         this.Server = opts.Server
         this.getSessionData = opts.GetSession
-        opts.DataStream.on('data', (data: object) => {
-            this.emit('message', data)
+        opts.DataStream.on('data', (...data: any[]) => {
+            this.emit('message', ...data)
         })
         opts.DataStream.on('internalData', (data: InternalData) => {
             this.Players = data.players
@@ -85,7 +85,7 @@ export class Connection {
      * @param event The name of the event.
      * @param listener The callback function.
      */
-    on(event: 'message', listener: (data: Object) => void): this
+    on(event: 'message', listener: (data: object) => void): this
     on(event: 'close', listener: () => void): this
     on(event: string, listener: (...params: any[]) => void): this {
         this.eventStream.on(event, listener)
@@ -97,7 +97,7 @@ export class Connection {
      * @param event The name of the event.
      * @param listener The callback function.
      */
-    once(event: 'message', listener: (data: Object) => void): this
+    once(event: 'message', listener: (data: object) => void): this
     once(event: 'close', listener: () => void): this 
     once(event: string, listener: (...params: any[]) => void): this {
         this.eventStream.once(event, listener)
@@ -107,7 +107,7 @@ export class Connection {
     /**
      * Alias for `connection.on(event, listener)`.
      */
-    addListener(event: 'message', listener: (data: Object) => void): this
+    addListener(event: 'message', listener: (data: object) => void): this
     addListener(event: 'close', listener: () => void): this 
     addListener(event: string, listener: (...params: any[]) => void): this {
         this.eventStream.addListener(event, listener)
@@ -117,7 +117,7 @@ export class Connection {
     /**
      * Removes the specified `listener` from the listener array for the event named `event`. At most, only removes 1 listener from the array.
      */
-    removeListener(event: 'message', listener: (data: Object) => void): this
+    removeListener(event: 'message', listener: (data: object) => void): this
     removeListener(event: 'close', listener: () => void): this
     removeListener(event: string, listener: (...params: any[]) => void): this {
         this.eventStream.removeListener(event, listener)
@@ -129,6 +129,6 @@ export class Connection {
      * @private
      */
     private emit(event: 'message' | 'close', ...params: any[]): boolean {
-        return this.eventStream.emit(event, params)
+        return this.eventStream.emit(event, ...params)
     }
 }
