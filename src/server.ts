@@ -115,7 +115,7 @@ export class Server {
             res.status(200).send()
         })
         this.app.get('/connect', async (req, res) => {
-            if (req.get('API-Key')?.trim() != key) return res.sendStatus(401)
+            if (req.get('API-Key')?.trim() != serverKey) return res.sendStatus(401)
             const JobId = req.get('Roblox-JobId')
             if (!JobId) return res.sendStatus(400)
             if (this.Connections.has(JobId)) return res.status(403).json({
