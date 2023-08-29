@@ -116,6 +116,7 @@ export class Server {
         })
         this.app.get('/connect', async (req, res) => {
             console.log(req.get('API-Key'))
+            console.log(req.get('API-Key') == key)
             if (req.get('API-Key') != key) return res.sendStatus(401)
             const JobId = req.get('Roblox-JobId')
             if (!JobId) return res.sendStatus(400)
