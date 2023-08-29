@@ -14,7 +14,11 @@ function assert(bool?: boolean, message: string = 'assertion failed!'): void | n
 }
 
 function stringSafeEqual(a: string, b: string) {
-    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b))
+    try {
+        return crypto.timingSafeEqual(Buffer.from(a, 'utf8'), Buffer.from(b, 'utf8'))
+    } catch {
+        return a == b
+    }
 }
 
 function calculateHmacKey(connection: Connection) {
@@ -172,7 +176,7 @@ export class Server {
     }
 
     private validateRequest(req: express.Request) {
-        if (!stringSafeEqual(req.get('API-Key')!, this.serverApiKey)) return 401
+        if (!stringSafeEqual(req.get('API-Key')!.trim(), this.serverApiKey)) return 401
 
         const conn = this.Connections.find((conn) => conn.id == req.params['serverId'])
         if (!conn) return 404
