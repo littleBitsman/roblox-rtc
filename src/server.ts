@@ -178,7 +178,10 @@ export class Server {
         this.app.post('/servers/:serverId/close', (req, res) => {
             const __a = this.validateRequest(req)
             if (__a != true) return res.sendStatus(__a)
-
+            const serverId = req.params.serverId
+            const connection = this.Connections.find((v) => v.id == serverId)
+            if (!connection) return res.sendStatus(404)
+            this.Streams.find((_, k) => k == connection.JobId)!.emit('close')
         })
 
     }
@@ -203,24 +206,82 @@ export class Server {
         return true
     }
 
-    on(event: 'connection', callback: (connection: Connection) => void) {
-        this.eventStream.on(event, callback)
+    /**
+     * Adds the `listener` function to the end of the listeners array for the event named `event`. 
+     * No checks are made to see if the `listener` has already been added. 
+     * Multiple calls passing the same combination of `event` and `listener` will result in the `listener` being added, and called, multiple times. 
+     * @param event The event that the listener function will listen for.
+     * @param listener The listener function to add to the listener array.
+     * @returns This, so that calls can be chained.
+     */
+    on(event: 'connection', listener: (connection: Connection) => void): this {
+        this.eventStream.on(event, listener)
+        return this
     }
 
-    once(event: 'connection', callback: (connection: Connection) => void) {
-        this.eventStream.once(event, callback)
+    /**
+     * Adds the `listener` function to the *beginning* of the listeners array for the event named `event`. 
+     * No checks are made to see if the `listener` has already been added. 
+     * Multiple calls passing the same combination of `event` and `listener` will result in the `listener` being added, and called, multiple times. 
+     * @param event The event that the listener function will listen for.
+     * @param listener The listener function to add to the listener array.
+     * @returns This, so that calls can be chained.
+     */
+    prependListener(event: 'connection', listener: (connection: Connection) => void): this {
+        this.eventStream.prependListener(event, listener)
+        return this
     }
 
-    addListener(event: 'connection', callback: (connection: Connection) => void) {
-        this.on(event, callback)
+    /** 
+     * Alias for `Server.on()`.
+    */
+    addListener(event: 'connection', listener: (connection: Connection) => void): this {
+        return this.on(event, listener)
     }
 
-    removeListener(event: 'connection', callback: (connection: Connection) => void) {
-        this.eventStream.removeListener(event, callback)
+    /**
+     * Adds a **one-time** `listener` function for the event named `event`. The next time `event` is triggered, this listener is removed and *then* invoked.
+     * 
+     * @param event The event that the listener function will listen for.
+     * @param listener The listener function to add to the listener array.
+     * @returns This, so that calls can be chained.
+     */
+    once(event: 'connection', listener: (connection: Connection) => void): this {
+        this.eventStream.once(event, listener)
+        return this
     }
 
-    off(event: 'connection', callback: (connection: Connection) => void) {
-        this.removeListener(event, callback)
+    /**
+     * Adds a **one-time** `listener` function for the event named `event` to the *beginning* of the listeners array. The next time `event` is triggered, this listener is removed and *then* invoked.
+     * 
+     * @param event The event that the listener function will listen for.
+     * @param listener The listener function to add to the listener array.
+     * @returns This, so that calls can be chained.
+     */
+    prependOnceListener(event: 'connection', listener: (connection: Connection) => void): this {
+        this.eventStream.prependOnceListener(event, listener)
+        return this
+    }
+
+    /**
+     * Removes the specified `listener` from the listener array for the event named `event`.
+     * 
+     * At most, `removeListener` will remove **one** instance of `listener` from the listener array. 
+     * If any single listener has been added multiple times to the listener array for the specified `event`, then `removeListener()` must be called multiple times to remove each instance.
+     * @param event The event that the `listener` is listening for.
+     * @param listener The listener function to be removed.
+     * @returns This, so that calls can be chained.
+     */
+    removeListener(event: 'connection', listener: (connection: Connection) => void): this {
+        this.eventStream.removeListener(event, listener)
+        return this
+    }
+
+    /**
+     * Alias for `Server.removeListener()`.
+     */
+    off(event: 'connection', listener: (connection: Connection) => void): this {
+        return this.removeListener(event, listener)
     }
 
     private emit(event: 'connection', connection: Connection) {
@@ -255,8 +316,11 @@ export class Server {
         if (response.status == 500) throw 'The Roblox server had an internal error.'
     }
 
-    getConnection(JobId: string): Connection | undefined {
-        return this.Connections.get(JobId)
+    /**
+     * Alias for `Server.getServerByJobId()`.
+     */
+    getServer(JobId: string): Connection | undefined {
+        return this.getServerByJobId(JobId)
     }
 
     private async sendData(data: string): Promise<AxiosResponse> {
@@ -271,6 +335,31 @@ export class Server {
                 resolve(err.response)
             })
         })
+    }
+
+    /**
+     * Get the server with the player (where `player.UserId == userId`) in it.
+     
+     * *Note: If the player is not in a server with the Roblox RTC module running in it, this will return undefined.*
+     * @param userId The userId of the player to search for
+     * @returns The server with the player in it, or undefined if it could not be found. (See note above for more info)
+     */
+    getServerWithPlayer(userId: string | number): Connection | undefined | never {
+        const searchFor = userId.toString()
+        if (isNaN(Number.parseFloat(searchFor))) throw 'Provide a valid numeric value or string as the userId.'
+        axios.get(`https://users.roblox.com/v1/users/${searchFor}`).catch((reason) => {
+            if (reason.response.status == 404) throw 'Invalid userId.'
+        })
+        return this.Connections.find((conn) => conn.players.find((id) => searchFor == id))
+    }
+
+    /**
+     * Get a server by its JobId (`game.JobId` Roblox equivalent)
+     * @param JobId The JobId to look for.
+     * @returns A server connection, or undefined if it does not exist.
+     */
+    getServerByJobId(JobId: string): Connection | undefined {
+        return this.Connections.get(JobId)
     }
 
     /**

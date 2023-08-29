@@ -47,12 +47,15 @@ export class Connection {
     }
 
     /**
-     * Get the session data for this Connection.
+     * Session data for this server. Likely useless, unless you want a really inefficient way of getting server info (why)
      */
     get session() {
         return this.getSessionData(this.SessionId)
     }
 
+    /**
+     * Players in the Roblox game server where Luau (Server is this object) `game.JobId == Server.JobId` returns true.
+     */
     get players() { return this.Players }
 
     /**
@@ -81,9 +84,12 @@ export class Connection {
     }
 
     /**
-     * Adds the `listener` function to the end of the listeners array for the event named `event`. No checks are made to see if the `listener` has already been added. Multiple calls passing the same combination of `event` and `listener` will result in the listener being added, and called, multiple times.
-     * @param event The name of the event.
-     * @param listener The callback function.
+     * Adds the `listener` function to the end of the listeners array for the event named `event`. 
+     * No checks are made to see if the `listener` has already been added. 
+     * Multiple calls passing the same combination of `event` and `listener` will result in the `listener` being added, and called, multiple times. 
+     * @param event The event that the listener function will listen for.
+     * @param listener The listener function to add to the listener array.
+     * @returns This, so that calls can be chained.
      */
     on(event: 'message', listener: (data: object) => void): this
     on(event: 'close', listener: () => void): this
@@ -93,19 +99,22 @@ export class Connection {
     }
 
     /**
-     * Adds a **one-time** `listener` function for the event named `event`. The next time `event` is triggered, this listener is removed and then invoked.
-     * @param event The name of the event.
-     * @param listener The callback function.
+     * Adds the `listener` function to the *beginning* of the listeners array for the event named `event`. 
+     * No checks are made to see if the `listener` has already been added. 
+     * Multiple calls passing the same combination of `event` and `listener` will result in the `listener` being added, and called, multiple times. 
+     * @param event The event that the listener function will listen for.
+     * @param listener The listener function to add to the listener array.
+     * @returns This, so that calls can be chained.
      */
-    once(event: 'message', listener: (data: object) => void): this
-    once(event: 'close', listener: () => void): this 
-    once(event: string, listener: (...params: any[]) => void): this {
-        this.eventStream.once(event, listener)
+    prependListener(event: 'message', listener: (data: object) => void): this
+    prependListener(event: 'close', listener: () => void): this
+    prependListener(event: string, listener: (...params: any[]) => void): this {
+        this.eventStream.prependListener(event, listener)
         return this
     }
 
     /**
-     * Alias for `connection.on(event, listener)`.
+     * Alias for `Connection.on(event, listener)`.
      */
     addListener(event: 'message', listener: (data: object) => void): this
     addListener(event: 'close', listener: () => void): this 
@@ -115,7 +124,41 @@ export class Connection {
     }
 
     /**
-     * Removes the specified `listener` from the listener array for the event named `event`. At most, only removes 1 listener from the array.
+     * Adds a **one-time** `listener` function for the event named `event`. The next time `event` is triggered, this listener is removed and *then* invoked.
+     * 
+     * @param event The event that the listener function will listen for.
+     * @param listener The listener function to add to the listener array.
+     * @returns This, so that calls can be chained.
+     */
+    once(event: 'message', listener: (data: object) => void): this
+    once(event: 'close', listener: () => void): this 
+    once(event: string, listener: (...params: any[]) => void): this {
+        this.eventStream.once(event, listener)
+        return this
+    }
+
+    /**
+     * Adds a **one-time** `listener` function for the event named `event` to the *beginning* of the listeners array. The next time `event` is triggered, this listener is removed and *then* invoked.
+     * 
+     * @param event The event that the listener function will listen for.
+     * @param listener The listener function to add to the listener array.
+     * @returns This, so that calls can be chained.
+     */
+    prependOnceListener(event: 'message', listener: (data: object) => void): this
+    prependOnceListener(event: 'close', listener: () => void): this 
+    prependOnceListener(event: string, listener: (...params: any[]) => void): this {
+        this.eventStream.prependOnceListener(event, listener)
+        return this
+    }
+
+    /**
+     * Removes the specified `listener` from the listener array for the event named `event`.
+     * 
+     * At most, `removeListener` will remove **one** instance of `listener` from the listener array. 
+     * If any single listener has been added multiple times to the listener array for the specified `event`, then `removeListener()` must be called multiple times to remove each instance.
+     * @param event The event that the `listener` is listening for.
+     * @param listener The listener function to be removed.
+     * @returns This, so that calls can be chained.
      */
     removeListener(event: 'message', listener: (data: object) => void): this
     removeListener(event: 'close', listener: () => void): this
