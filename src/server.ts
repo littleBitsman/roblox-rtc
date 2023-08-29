@@ -109,7 +109,7 @@ export class Server {
             cookie: { secure: false },
             resave: false,
             saveUninitialized: false
-        }))
+        }), express.json())
 
         this.app.get('/apikey', async (_, res) => {
             await axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunicationsData`, { message: JSON.stringify({ ApiKey: serverKey }) }, {
