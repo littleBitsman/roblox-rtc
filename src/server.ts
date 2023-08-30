@@ -5,9 +5,10 @@ import memorystore from 'memorystore'
 import { Collection } from '@discordjs/collection'
 const store = memorystore(session)
 import crypto from 'node:crypto'
-import { Server as httpServer } from 'node:http'
+import { Server as httpServer, createServer as createHttpServer } from 'node:http'
 import { EventEmitter } from 'node:events'
 import { Connection } from './connection'
+import { Server as httpsServer, createServer as createHttpsServer } from 'node:https'
 
 function assert(bool?: boolean, message: string = 'assertion failed!'): void | never {
     if (!bool) throw message
@@ -66,6 +67,32 @@ interface DataSendOptions {
     jobId?: string
 }
 
+interface ListenOptions {
+    /**
+     * The port that the Server should listen on. If `httpsPort` is specified, this is ignored. (See below for reasoning)
+     * If `key` and `cert` are specified, but `httpsPort` is not, this option is used as the `httpsPort`.
+     * 
+     * This option is ignored if `httpsPort` is present due to HTTPS being preferred for most operations and being more secure.
+     */
+    port?: number,
+    /**
+     * The port that the Server should listen with an HTTPS server on. 
+     * If this is specified, `key` and `cert` are required to make the HTTPS server have a valid certificate present on requests to the server.
+     * No checks are made to make sure that `key` and `cert` are valid.
+     */
+    httpsPort?: number
+    /**
+     * Private key in PEM format for the HTTPS server. It can be a string, a Buffer, or an array of strings or Buffers in case of a key chain.
+     * No checks are made to make sure that this key is valid.
+     */
+    key?: string | Buffer | (string | Buffer)[],
+    /**
+     * Certificate in PEM format for the HTTPS server. It can be a string, a Buffer, or an array of strings or Buffers in case of a certificate chain.
+     * No checks are made to make sure that this cert is valid.
+     */
+    cert?: string | Buffer | (string | Buffer)[]
+}
+
 function makeKey(length: number = 16) {
     var result = '';
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -77,7 +104,7 @@ function makeKey(length: number = 16) {
 }
 
 export class Server {
-    readonly app = express()
+    private readonly app = express()
     private eventStream = new EventEmitter()
     private readonly Connections: Collection<string, Connection> = new Collection()
     private readonly Streams: Collection<string, EventEmitter> = new Collection()
@@ -166,6 +193,7 @@ export class Server {
             const connection = this.Connections.find((v) => v.id == serverId)
             if (!connection) return res.sendStatus(404)
             this.Streams.find((_, k) => k == connection.JobId)!.emit('internalData', req.body.data)
+            res.sendStatus(204)
         })
         this.app.post('/servers/:serverId/data', (req, res) => {
             const __a = this.validateRequest(req)
@@ -174,6 +202,7 @@ export class Server {
             const connection = this.Connections.find((v) => v.id == serverId)
             if (!connection) return res.sendStatus(404)
             this.Streams.find((_, k) => k == connection.JobId)!.emit('data', req.body.data)
+            res.sendStatus(204)
         })
         this.app.post('/servers/:serverId/close', (req, res) => {
             const __a = this.validateRequest(req)
@@ -182,6 +211,8 @@ export class Server {
             const connection = this.Connections.find((v) => v.id == serverId)
             if (!connection) return res.sendStatus(404)
             this.Streams.find((_, k) => k == connection.JobId)!.emit('close')
+            this.Connections.delete(connection.JobId)
+            res.sendStatus(204)
         })
 
     }
@@ -328,12 +359,12 @@ export class Server {
             axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${this.universeId}/topics/RealTimeCommunicationsData`,
                 { message: data },
                 { headers: { 'x-api-key': this.robloxApiKey, 'Content-Type': 'application/json' } })
-            .then((res) => {
-                resolve(res)
-            })
-            .catch((err) => {
-                resolve(err.response)
-            })
+                .then((res) => {
+                    resolve(res)
+                })
+                .catch((err) => {
+                    resolve(err.response)
+                })
         })
     }
 
@@ -363,6 +394,14 @@ export class Server {
     }
 
     /**
+     * Get a server by its assigned ID. *The ID is assigned when the server POSTs to `localhost/connect`.*
+     * @param id 
+     */
+    getServerById(id: string): Connection | undefined {
+        return this.Connections.find((conn) => conn.id == id)
+    }
+
+    /**
      * Start listening for conections on port `port`.
      * ```js
      * const { Server } = require('roblox-rtc')
@@ -371,12 +410,25 @@ export class Server {
      * })
      * server.listen(3000) // replace 3000 with your port of choice
      * ```
-     * If you want to make an HTTP and HTTPS server, you can do so with `https.createServer({...}, server.app).listen(443)`.
+     * If you want to make an HTTP and HTTPS server, you can do so with `Server.listen(options)`.
      * @param port The port to listen on. Defaults to port 3000.
      */
     listen(port: number): httpServer
     listen(port: number, callback: () => void): httpServer
-    listen(port: number = 3000, callback?: () => void): httpServer {
-        return this.app.listen(port, callback)
+    listen(options: ListenOptions, callback: () => void): httpServer | httpsServer
+    listen(opts: number | ListenOptions, callback?: () => void): httpServer | httpsServer {
+        if (typeof opts == 'object') {
+            if (opts.httpsPort) {
+                return createHttpsServer({
+                    key: opts.key,
+                    cert: opts.cert
+                }, this.app).listen(opts.httpsPort, callback)
+            } else if (opts.key && opts.cert) {
+                return createHttpsServer({
+                    key: opts.key,
+                    cert: opts.cert
+                }, this.app).listen(opts.port || opts.httpsPort, callback)
+            } else return this.app.listen(opts.port, callback)
+        } else return this.app.listen(opts, callback)
     }
 }

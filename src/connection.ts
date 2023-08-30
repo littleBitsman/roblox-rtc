@@ -19,15 +19,37 @@ export interface InternalData {
 
 export class Connection {
     private eventStream = new EventEmitter()
+    /**
+     * The `game.JobId` of the connected Roblox server.
+     */
     readonly JobId: string
+    /**
+     * The `game.PlaceId` of the connected Roblox server.
+     */
     readonly PlaceId: string
+    /**
+     * The `Server` that is managing this connection object.
+     */
     readonly Server: Server
     private readonly SessionId: string
+    /**
+     * The `Server`-assigned ID for this server. Is a numeric string.
+     */
     readonly id: string
+    /**
+     * The `Server`-assigned client secret that is sent to the Roblox game server to add an extra layer of security.
+     * This secret is used to HMAC the body of a request to `/servers/:serverId/data` with sha256. 
+     * The only clients that know this `secret` are the `Server` and the Roblox game server.
+     * All `secret`s are unique between game servers.
+     */
     readonly secret: string = randomUUID().replace('-', '')
     private readonly getSessionData: (id: string) => SessionData | undefined
     private customData: object | undefined = {}
     private Players: string[] = []
+    /**
+     * how
+     * @private
+     */
     constructor(opts: ConnectionOpts) {
         this.JobId = opts.JobId
         this.PlaceId = opts.PlaceId
@@ -59,7 +81,7 @@ export class Connection {
     get players() { return this.Players }
 
     /**
-     * Get custom data for this Connection. You can set custom data with `connection.setCustomData()`.
+     * Custom data for this Connection. You can set custom data with `connection.setCustomData()`.
      */
     get getCustomData(): object | undefined {
         return this.customData
