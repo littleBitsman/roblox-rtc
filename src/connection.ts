@@ -96,7 +96,7 @@ export class Connection {
 
     /**
      * Send data to the server represented by this object. *Note: The* `jobId` *and* `placeId` *are handled for you.*
-     * @param data The data to send.
+     * @param {object} data The data to send.
      */
     send(data: object) {
         return this.Server.send(data, {
@@ -109,9 +109,9 @@ export class Connection {
      * Adds the `listener` function to the end of the listeners array for the event named `event`. 
      * No checks are made to see if the `listener` has already been added. 
      * Multiple calls passing the same combination of `event` and `listener` will result in the `listener` being added, and called, multiple times. 
-     * @param event The event that the listener function will listen for.
+     * @param {string} event The event that the listener function will listen for.
      * @param listener The listener function to add to the listener array.
-     * @returns This, so that calls can be chained.
+     * @returns {ThisType} This, so that calls can be chained.
      */
     on(event: 'message', listener: (data: object) => void): this
     on(event: 'close', listener: () => void): this
@@ -124,9 +124,9 @@ export class Connection {
      * Adds the `listener` function to the *beginning* of the listeners array for the event named `event`. 
      * No checks are made to see if the `listener` has already been added. 
      * Multiple calls passing the same combination of `event` and `listener` will result in the `listener` being added, and called, multiple times. 
-     * @param event The event that the listener function will listen for.
+     * @param {string} event The event that the listener function will listen for.
      * @param listener The listener function to add to the listener array.
-     * @returns This, so that calls can be chained.
+     * @returns {ThisType} This, so that calls can be chained.
      */
     prependListener(event: 'message', listener: (data: object) => void): this
     prependListener(event: 'close', listener: () => void): this
@@ -148,9 +148,9 @@ export class Connection {
     /**
      * Adds a **one-time** `listener` function for the event named `event`. The next time `event` is triggered, this listener is removed and *then* invoked.
      * 
-     * @param event The event that the listener function will listen for.
+     * @param {string} event The event that the listener function will listen for.
      * @param listener The listener function to add to the listener array.
-     * @returns This, so that calls can be chained.
+     * @returns {ThisType} This, so that calls can be chained.
      */
     once(event: 'message', listener: (data: object) => void): this
     once(event: 'close', listener: () => void): this 
@@ -162,9 +162,9 @@ export class Connection {
     /**
      * Adds a **one-time** `listener` function for the event named `event` to the *beginning* of the listeners array. The next time `event` is triggered, this listener is removed and *then* invoked.
      * 
-     * @param event The event that the listener function will listen for.
+     * @param {string} event The event that the listener function will listen for.
      * @param listener The listener function to add to the listener array.
-     * @returns This, so that calls can be chained.
+     * @returns {ThisType} This, so that calls can be chained.
      */
     prependOnceListener(event: 'message', listener: (data: object) => void): this
     prependOnceListener(event: 'close', listener: () => void): this 
@@ -178,9 +178,9 @@ export class Connection {
      * 
      * At most, `removeListener` will remove **one** instance of `listener` from the listener array. 
      * If any single listener has been added multiple times to the listener array for the specified `event`, then `removeListener()` must be called multiple times to remove each instance.
-     * @param event The event that the `listener` is listening for.
+     * @param {string} event The event that the `listener` is listening for.
      * @param listener The listener function to be removed.
-     * @returns This, so that calls can be chained.
+     * @returns {ThisType} This, so that calls can be chained.
      */
     removeListener(event: 'message', listener: (data: object) => void): this
     removeListener(event: 'close', listener: () => void): this

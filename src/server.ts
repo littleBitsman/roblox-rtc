@@ -82,15 +82,23 @@ interface ListenOptions {
      */
     httpsPort?: number
     /**
-     * Private key in PEM format for the HTTPS server. It can be a string, a Buffer, or an array of strings or Buffers in case of a key chain.
+     * Private keys in PEM format. PEM allows the option of private keys being encrypted. 
+     * Encrypted keys will be decrypted with `options.passphrase`. 
+     * Multiple keys using different algorithms can be provided either as an array of unencrypted key strings or buffers, 
+     * or an array of objects in the form {pem: <string|buffer>[, passphrase: ]}. The object form can only occur in an array. 
      * No checks are made to make sure that this key is valid.
      */
     key?: string | Buffer | (string | Buffer)[],
     /**
-     * Certificate in PEM format for the HTTPS server. It can be a string, a Buffer, or an array of strings or Buffers in case of a certificate chain.
+     * Cert chains in PEM format. One cert chain should be provided per private key. 
+     * Each cert chain should consist of the PEM formatted certificate for a provided private key, followed by the PEM formatted intermediate certificates (if any), in order, and not including the root CA (the root CA must be pre-known to the peer, see ca). When providing multiple cert chains, they do not have to be in the same order as their private keys in key. If the intermediate certificates are not provided, the peer will not be able to validate the certificate, and the handshake will fail.
      * No checks are made to make sure that this cert is valid.
      */
-    cert?: string | Buffer | (string | Buffer)[]
+    cert?: string | Buffer | (string | Buffer)[],
+    /**
+     * Shared passphrase used for a single private key and/or a PFX.
+     */
+    passphrase?: string
 }
 
 function makeKey(length: number = 16) {
@@ -241,9 +249,9 @@ export class Server {
      * Adds the `listener` function to the end of the listeners array for the event named `event`. 
      * No checks are made to see if the `listener` has already been added. 
      * Multiple calls passing the same combination of `event` and `listener` will result in the `listener` being added, and called, multiple times. 
-     * @param event The event that the listener function will listen for.
+     * @param {string} event The event that the listener function will listen for.
      * @param listener The listener function to add to the listener array.
-     * @returns This, so that calls can be chained.
+     * @returns {ThisType} This, so that calls can be chained.
      */
     on(event: 'connection', listener: (connection: Connection) => void): this {
         this.eventStream.on(event, listener)
@@ -254,9 +262,9 @@ export class Server {
      * Adds the `listener` function to the *beginning* of the listeners array for the event named `event`. 
      * No checks are made to see if the `listener` has already been added. 
      * Multiple calls passing the same combination of `event` and `listener` will result in the `listener` being added, and called, multiple times. 
-     * @param event The event that the listener function will listen for.
+     * @param {string} event The event that the listener function will listen for.
      * @param listener The listener function to add to the listener array.
-     * @returns This, so that calls can be chained.
+     * @returns {ThisType} This, so that calls can be chained.
      */
     prependListener(event: 'connection', listener: (connection: Connection) => void): this {
         this.eventStream.prependListener(event, listener)
@@ -273,9 +281,9 @@ export class Server {
     /**
      * Adds a **one-time** `listener` function for the event named `event`. The next time `event` is triggered, this listener is removed and *then* invoked.
      * 
-     * @param event The event that the listener function will listen for.
+     * @param {string} event The event that the listener function will listen for.
      * @param listener The listener function to add to the listener array.
-     * @returns This, so that calls can be chained.
+     * @returns {ThisType} This, so that calls can be chained.
      */
     once(event: 'connection', listener: (connection: Connection) => void): this {
         this.eventStream.once(event, listener)
@@ -285,9 +293,9 @@ export class Server {
     /**
      * Adds a **one-time** `listener` function for the event named `event` to the *beginning* of the listeners array. The next time `event` is triggered, this listener is removed and *then* invoked.
      * 
-     * @param event The event that the listener function will listen for.
+     * @param {string} event The event that the listener function will listen for.
      * @param listener The listener function to add to the listener array.
-     * @returns This, so that calls can be chained.
+     * @returns {ThisType} This, so that calls can be chained.
      */
     prependOnceListener(event: 'connection', listener: (connection: Connection) => void): this {
         this.eventStream.prependOnceListener(event, listener)
@@ -299,9 +307,9 @@ export class Server {
      * 
      * At most, `removeListener` will remove **one** instance of `listener` from the listener array. 
      * If any single listener has been added multiple times to the listener array for the specified `event`, then `removeListener()` must be called multiple times to remove each instance.
-     * @param event The event that the `listener` is listening for.
+     * @param {string} event The event that the `listener` is listening for.
      * @param listener The listener function to be removed.
-     * @returns This, so that calls can be chained.
+     * @returns {ThisType} This, so that calls can be chained.
      */
     removeListener(event: 'connection', listener: (connection: Connection) => void): this {
         this.eventStream.removeListener(event, listener)
@@ -322,16 +330,16 @@ export class Server {
     /**
      * Sends `data` to Roblox game servers via Roblox OpenCloud Messaging Service. 
      * @async
-     * @param data The data to send with the request. `JSON.stringify()` is executed on this automatically, so there is no need to run it yourself.
+     * @param {object} data The data to send with the request. *`JSON.stringify()` is executed on this automatically, so there is no need to run it yourself.*
      * Note that if your data object has a `ApiKey` value, the `ApiKey` will be **deleted**.
      * A `timestamp` value is added automatically.
-     * @param options The options for the request. Note that if you do not specify any options, the data will be sent to ALL game servers.
+     * @param {DataSendOptions | undefined} options The options for the request. Note that if you do not specify any options, the data will be sent to ALL game servers.
      * 
      * Options:
-     * @param options.jobId Adds a filter to the request to Roblox such that only the game server where `game.JobId == jobId` will get the message.
-     * @param options.placeId Adds a filter to the request to Roblox such that only game servers where `game.PlaceId == placeId` will get the message. 
+     * @param {string | undefined} options.jobId Adds a filter to the request to Roblox such that only the game server where `game.JobId == jobId` will get the message.
+     * @param {string | undefined} options.placeId Adds a filter to the request to Roblox such that only game servers where `game.PlaceId == placeId` will get the message. 
      * *WARNING: If you specify the wrong place ID and you specify a job ID, the message may not be received by the server you intended. The logic on the Roblox game server side checks BOTH place ID (if the filter exists) and job ID (if the filter exists).*
-     */
+    */
     async send(data: any, options?: DataSendOptions) {
         if (isValidJsonString(data)) data = JSON.parse(data)
         if (data['ApiKey']) delete data.ApiKey
@@ -372,7 +380,7 @@ export class Server {
      * Get the server with the player (where `player.UserId == userId`) in it.
      
      * *Note: If the player is not in a server with the Roblox RTC module running in it, this will return undefined.*
-     * @param userId The userId of the player to search for
+     * @param {string | number} userId The userId of the player to search for
      * @returns The server with the player in it, or undefined if it could not be found. (See note above for more info)
      */
     getServerWithPlayer(userId: string | number): Connection | undefined | never {
@@ -386,8 +394,8 @@ export class Server {
 
     /**
      * Get a server by its JobId (`game.JobId` Roblox equivalent)
-     * @param JobId The JobId to look for.
-     * @returns A server connection, or undefined if it does not exist.
+     * @param {string} JobId The JobId to look for.
+     * @returns {Connection | undefined} A server connection, or undefined if it does not exist.
      */
     getServerByJobId(JobId: string): Connection | undefined {
         return this.Connections.get(JobId)
@@ -395,10 +403,11 @@ export class Server {
 
     /**
      * Get a server by its assigned ID. *The ID is assigned when the server POSTs to `localhost/connect`.*
-     * @param id 
+     * @param {string | number | symbol} id The assigned ID of the server.
+     * @returns {Connection | undefined} A server connection, or undefined if it does not exist.
      */
-    getServerById(id: string): Connection | undefined {
-        return this.Connections.find((conn) => conn.id == id)
+    getServerById(id: string | number | symbol): Connection | undefined {
+        return this.Connections.find((conn) => conn.id == id.toString())
     }
 
     /**
@@ -410,8 +419,25 @@ export class Server {
      * })
      * server.listen(3000) // replace 3000 with your port of choice
      * ```
+     * Or
+     * ```js
+     * const fs = require('fs')
+     * const { Server } = require('roblox-rtc')
+     * const server = new Server({
+     *     // your options here...
+     * })
+     * server.listen({
+     *     httpsPort: 443,
+     *     key: fs.readFileSync('path/to/key.pem', 'utf8'),
+     *     cert: fs.readFileSync('path/to/cert.pem', 'utf8')
+     * })
+     * ```
      * If you want to make an HTTP and HTTPS server, you can do so with `Server.listen(options)`.
-     * @param port The port to listen on. Defaults to port 3000.
+     * 
+     * Overloads:
+     * 
+     * 
+     * @returns {httpServer | httpsServer} A httpServer or httpsServer. An httpsServer is only returns when you use options and not only a port.
      */
     listen(port: number): httpServer
     listen(port: number, callback: () => void): httpServer
@@ -421,7 +447,7 @@ export class Server {
             if (opts.httpsPort) {
                 return createHttpsServer({
                     key: opts.key,
-                    cert: opts.cert
+                    cert: opts.cert,
                 }, this.app).listen(opts.httpsPort, callback)
             } else if (opts.key && opts.cert) {
                 return createHttpsServer({
