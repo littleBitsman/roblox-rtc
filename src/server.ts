@@ -435,7 +435,9 @@ export class Server {
      * If you want to make an HTTP and HTTPS server, you can do so with `Server.listen(options)`.
      * 
      * Overloads:
+     * 
      * `listen(port: number [, callback: () => void])`
+     * 
      * `listen(options: ListenOptions [, callback: () => void])`
      * 
      * @returns {httpServer | httpsServer} A httpServer or httpsServer. An httpsServer is only returns when you use options and not only a port.
