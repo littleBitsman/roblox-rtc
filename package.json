@@ -31,7 +31,6 @@
     "express": "^4.18.2",
     "express-session": "^1.17.3",
     "memorystore": "^1.6.7",
-    "roblox-rtc": "^0.2.1-alpha",
     "ws": "^8.13.0"
   },
   "devDependencies": {
