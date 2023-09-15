@@ -55,6 +55,9 @@ interface ServerOptions {
     serverKey?: string
 }
 
+export interface CreateServerOptions extends ServerOptions, Omit<Omit<ListenOptions, "httpsPort">, "port"> {
+}
+
 interface DataSendOptions {
     /**
      * Adds a filter to the request to Roblox such that only the server with this `placeId` will get the message. 
