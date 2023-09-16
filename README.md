@@ -19,9 +19,7 @@ npm install roblox-rtc
 Create a server:
 ```js
 const roblox_rtc = require("roblox-rtc")
-roblox_rtc.createServer({
-    port: 3000,
-})
+roblox_rtc.createServer().listen(3000)
 ```
 
 Create an HTTPS server:
