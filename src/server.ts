@@ -40,7 +40,7 @@ function isValidJsonString(obj?: any): boolean {
     }
 }
 
-interface ServerOptions {
+export interface CreateServerOptions extends Omit<Omit<ListenOptions, "httpsPort">, "port"> {
     /**
      * The ID of the **universe** (also known as **game**, contains multiple **places**). Required for functionality.
      */
@@ -53,9 +53,6 @@ interface ServerOptions {
      * The API key to have game servers use to authenticate with this server. If it is not specified, a random 64-character key will be generated pseudorandomly.
      */
     serverKey?: string
-}
-
-export interface CreateServerOptions extends ServerOptions, Omit<Omit<ListenOptions, "httpsPort">, "port"> {
 }
 
 interface DataSendOptions {
@@ -123,12 +120,19 @@ export class Server {
     private readonly robloxApiKey: string
     private readonly serverApiKey: string
     private readonly sessionStore: session.MemoryStore
-    constructor(options: ServerOptions) {
+    private readonly key: string | Buffer | (string | Buffer)[] | undefined = undefined
+    private readonly cert: string | Buffer | (string | Buffer)[] | undefined = undefined
+    constructor(options: CreateServerOptions) {
         const universeId = options.universeId
         const key = options.robloxApiKey
         if (!options.serverKey) options.serverKey = makeKey(64)
         const serverKey = options.serverKey.trim()
-
+        if (options.key) {
+            this.key = options.key
+        }
+        if (options.cert) {
+            this.cert = options.cert
+        }
         this.universeId = universeId
         this.robloxApiKey = key
         this.serverApiKey = serverKey
@@ -455,10 +459,10 @@ export class Server {
                     key: opts.key,
                     cert: opts.cert,
                 }, this.app).listen(opts.httpsPort, callback)
-            } else if (opts.key && opts.cert) {
+            } else if ((opts.key && opts.cert) || (this.key && this.cert)) {
                 return createHttpsServer({
-                    key: opts.key,
-                    cert: opts.cert
+                    key: this.key || opts.key,
+                    cert: this.cert || opts.cert
                 }, this.app).listen(opts.port || opts.httpsPort, callback)
             } else return this.app.listen(opts.port, callback)
         } else return this.app.listen(opts, callback)
