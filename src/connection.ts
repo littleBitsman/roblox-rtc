@@ -44,7 +44,7 @@ export class Connection {
      */
     readonly secret: string = randomUUID().replace('-', '')
     private readonly getSessionData: (id: string) => SessionData | undefined
-    private customData: object | undefined = {}
+    private customDataVar: object | undefined = {}
     private Players: string[] = []
     /**
      * how
@@ -83,15 +83,15 @@ export class Connection {
     /**
      * Custom data for this Connection. You can set custom data with `connection.setCustomData()`.
      */
-    get getCustomData(): object | undefined {
-        return this.customData
+    get customData(): object | undefined {
+        return this.customDataVar
     }
 
     /**
      * Set custom data for this Connection. You can get custom data with `connection.getCustomData()`.
      */
     set setCustomData(newData: object | undefined) {
-        this.customData = newData
+        this.customDataVar = newData
     }
 
     /**

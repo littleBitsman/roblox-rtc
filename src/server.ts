@@ -347,7 +347,7 @@ export class Server {
      * @param {string | undefined} options.placeId Adds a filter to the request to Roblox such that only game servers where `game.PlaceId == placeId` will get the message. 
      * *WARNING: If you specify the wrong place ID and you specify a job ID, the message may not be received by the server you intended. The logic on the Roblox game server side checks BOTH place ID (if the filter exists) and job ID (if the filter exists).*
     */
-    async send(data: any, options?: DataSendOptions) {
+    async send(data: any, options?: DataSendOptions): Promise<void> {
         if (isValidJsonString(data)) data = JSON.parse(data)
         if (data['ApiKey']) delete data.ApiKey
         const json = { data: data }

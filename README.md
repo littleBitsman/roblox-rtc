@@ -34,3 +34,53 @@ roblox_rtx.createServer({
     console.log('started HTTPS server on port 3000')
 })
 ```
+
+Send a message to all servers:
+```js
+const roblox_rtc = require("roblox-rtc")
+const server = roblox_rtc.createServer(...) // replace ... with your options...
+
+server.send({
+    // your data here...
+}).then(() => {
+    // some logic here
+}).catch(() => {
+    // catch any errors
+})
+
+// Or you can do it asynchronously
+async function main() {
+    await server.send({
+        // your data here...
+    })
+}
+```
+
+Send data to all servers that are connected with a specific `game.PlaceId` or the server with the same `game.JobId`:
+```js
+const roblox_rtc = require("roblox-rtc")
+const server = roblox_rtc.createServer({
+    // your options here
+})
+
+server.send({
+    // your data here
+}, {
+    PlaceId: 0, // replace with your PlaceId
+    // JobId: "" // replace this with the server JobId. Also, instead of doing this, you can take a Connection object and directly call send (next example)
+})
+```
+
+Send a message to a server using a Connection object (and also Connection listening):
+```js
+const roblox_rtc = require("roblox-rtc")
+const server = roblox_rtc.createServer({
+    // your options here
+})
+
+server.on("connection", (conn) => {
+    conn.send({
+        // your data here...
+    })
+})
+```
