@@ -16,6 +16,8 @@ Install:
 npm install roblox-rtc
 ```
 
+**Most functions have thorough JSDocs.**
+
 Create a server:
 ```js
 const roblox_rtc = require("roblox-rtc")
@@ -54,6 +56,8 @@ async function main() {
         // your data here...
     })
 }
+
+server.listen(3000) // change 3000 to your port
 ```
 
 Send data to all servers that are connected with a specific `game.PlaceId` or the server with the same `game.JobId`:
@@ -69,6 +73,8 @@ server.send({
     PlaceId: 0, // replace with your PlaceId
     // JobId: "" // replace this with the server JobId. Also, instead of doing this, you can take a Connection object and directly call send (next example)
 })
+
+server.listen(3000) // change 3000 to your port
 ```
 
 Send a message to a server using a Connection object (and also Connection listening):
@@ -83,4 +89,21 @@ server.on("connection", (conn) => {
         // your data here...
     })
 })
+
+server.listen(3000) // change 3000 to your port
+```
+
+Get players in a server:
+```js
+const roblox_rtc = require("roblox-rtc")
+const server = roblox_rtc.createServer({
+    // your options here
+})
+
+server.on("connection", (conn) => {
+    const players = conn.players
+    // your logic here
+})
+
+server.listen(3000) // change 3000 to your port
 ```
