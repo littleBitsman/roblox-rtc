@@ -6,3 +6,4 @@ test/*
 .github/*
 .npmignore
 .gitignore
+tsconfig.json
