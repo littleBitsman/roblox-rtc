@@ -1,6 +1,6 @@
 import express from 'express'
 import axios, { AxiosResponse } from 'axios'
-import session from 'express-session'
+import session, { SessionData } from 'express-session'
 import memorystore from 'memorystore'
 import { Collection } from '@discordjs/collection'
 const store = memorystore(session)
@@ -40,7 +40,7 @@ function isValidJsonString(obj?: any): boolean {
     }
 }
 
-export interface CreateServerOptions extends Omit<Omit<ListenOptions, "httpsPort">, "port"> {
+export interface CreateServerOptions extends Omit<ListenOptions, "port" | "httpsPort"> {
     /**
      * The ID of the **universe** (also known as **game**, contains multiple **places**). Required for functionality.
      */
@@ -52,7 +52,16 @@ export interface CreateServerOptions extends Omit<Omit<ListenOptions, "httpsPort
     /**
      * The API key to have game servers use to authenticate with this server. If it is not specified, a random 64-character key will be generated pseudorandomly.
      */
-    serverKey?: string
+    serverKey?: string,
+
+    /**
+     * A custom function that the Server will call to assign a ID to any game server.
+     * It should return a string, if not the default of `Server.Connections.Size.toString()` is used.
+     * Proper functions should return a unique value every time it is called. `Math.random()` is not suffice
+     * to be completely random. For this, if you want to change it at all, it is recommended to use `crypto.randomUUID()`
+     * and truncate the string to be less than 16 characters.
+     */
+    createId?: () => (string | symbol)
 }
 
 interface DataSendOptions {
@@ -179,14 +188,7 @@ export class Server {
                 PlaceId: PlaceId,
                 SessionId: req.sessionID,
                 Server: this,
-                id: this.Connections.size.toString(),
-                GetSession: (id) => {
-                    var a
-                    this.sessionStore.get(id, (_, b) => {
-                        a = b
-                    })
-                    return a
-                },
+                id: options.createId ? options.createId().toString().trim().substring(0, 16) : this.Connections.size.toString(),
                 DataStream: stream
             })
             req.session['JobId'] = JobId
@@ -205,7 +207,7 @@ export class Server {
             if (__a != true) return res.sendStatus(__a)
             if (!req.get('data-type') || req.get('data-type') != 'internal') return res.sendStatus(400)
             const serverId = req.params.serverId
-            const connection = this.Connections.find((v) => v.id == serverId)
+            const connection = this.getServerById(serverId)
             if (!connection) return res.sendStatus(404)
             this.Streams.find((_, k) => k == connection.JobId)!.emit('internalData', req.body.data)
             res.sendStatus(204)
@@ -214,7 +216,7 @@ export class Server {
             const __a = this.validateRequest(req)
             if (__a != true) return res.sendStatus(__a)
             const serverId = req.params.serverId
-            const connection = this.Connections.find((v) => v.id == serverId)
+            const connection = this.getServerById(serverId)
             if (!connection) return res.sendStatus(404)
             this.Streams.find((_, k) => k == connection.JobId)!.emit('data', req.body.data)
             res.sendStatus(204)

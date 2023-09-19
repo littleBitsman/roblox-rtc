@@ -9,11 +9,10 @@ interface ConnectionOpts {
     SessionId: string,
     Server: Server,
     id: string,
-    GetSession: (id: string) => SessionData | undefined,
     DataStream: EventEmitter
 }
 
-export interface InternalData {
+interface InternalData {
     players: string[]
 }
 
@@ -33,7 +32,7 @@ export class Connection {
     readonly Server: Server
     private readonly SessionId: string
     /**
-     * The `Server`-assigned ID for this server. Is a numeric string.
+     * The `Server`-assigned ID for this (game) server. Is a numeric string.
      */
     readonly id: string
     /**
@@ -43,7 +42,6 @@ export class Connection {
      * All `secret`s are unique between game servers.
      */
     readonly secret: string = randomUUID().replace('-', '')
-    private readonly getSessionData: (id: string) => SessionData | undefined
     private customDataVar: object | undefined = {}
     private Players: string[] = []
     /**
@@ -56,7 +54,7 @@ export class Connection {
         this.SessionId = opts.SessionId
         this.id = opts.id
         this.Server = opts.Server
-        this.getSessionData = opts.GetSession
+        
         opts.DataStream.on('data', (...data: any[]) => {
             this.emit('message', ...data)
         })
@@ -66,13 +64,6 @@ export class Connection {
         opts.DataStream.on('close', () => {
             this.emit('close')
         })
-    }
-
-    /**
-     * Session data for this server. Likely useless, unless you want a really inefficient way of getting server info (why)
-     */
-    get session() {
-        return this.getSessionData(this.SessionId)
     }
 
     /**

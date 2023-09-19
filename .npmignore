@@ -7,3 +7,4 @@ test/*
 .npmignore
 .gitignore
 tsconfig.json
+examples
