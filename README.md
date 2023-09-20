@@ -16,7 +16,7 @@ Install:
 npm install roblox-rtc
 ```
 
-[Roblox (Luau) Module Docs](https://github.com/littleBitsman/roblox-rtc/tree/main/roblox-docs/index.md)
+[Roblox (Luau) Module Docs](https://github.com/littleBitsman/roblox-rtc/wiki/Roblox-Module-Docs)
 
 **Most functions have thorough JSDocs.**
 
