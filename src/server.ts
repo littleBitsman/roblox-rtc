@@ -1,9 +1,9 @@
 import express from 'express'
 import axios, { AxiosResponse } from 'axios'
-import session, { SessionData } from 'express-session'
-import memorystore from 'memorystore'
+import session from 'express-session'
+import filestore from 'session-file-store'
 import { Collection } from '@discordjs/collection'
-const store = memorystore(session)
+const store = filestore(session)
 import crypto from 'node:crypto'
 import { Server as httpServer, createServer as createHttpServer } from 'node:http'
 import { EventEmitter } from 'node:events'
@@ -128,7 +128,7 @@ export class Server {
     private readonly universeId: string
     private readonly robloxApiKey: string
     private readonly serverApiKey: string
-    private readonly sessionStore: session.MemoryStore
+    private readonly sessionStore: session.Store
     private readonly key: string | Buffer | (string | Buffer)[] | undefined = undefined
     private readonly cert: string | Buffer | (string | Buffer)[] | undefined = undefined
     constructor(options: CreateServerOptions) {
@@ -172,7 +172,7 @@ export class Server {
             res.status(200).send()
         })
         this.app.post('/connect', async (req, res) => {
-            if (req.get('API-Key')?.trim() != serverKey) return res.sendStatus(401)
+            if (!req.get('API-Key') || req.get('API-Key')?.trim() != serverKey) return res.sendStatus(401)
             const JobId = req.get('Roblox-JobId')
             if (!JobId) return res.sendStatus(400)
             if (this.Connections.has(JobId)) return res.status(403).json({
