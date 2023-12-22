@@ -9,6 +9,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "roblox-rtc": "^5.0.0-beta"
+    "roblox-rtc": "^5.1.0-beta"
   }
 }

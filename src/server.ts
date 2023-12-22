@@ -5,7 +5,7 @@ import filestore from 'session-file-store'
 import { Collection } from '@discordjs/collection'
 const store = filestore(session)
 import crypto from 'node:crypto'
-import { Server as httpServer, createServer as createHttpServer } from 'node:http'
+import { Server as httpServer } from 'node:http'
 import { EventEmitter } from 'node:events'
 import { Connection } from './connection'
 import { Server as httpsServer, createServer as createHttpsServer } from 'node:https'
@@ -229,6 +229,7 @@ export class Server {
             if (!connection) return res.sendStatus(404)
             this.Streams.find((_, k) => k == connection.JobId)!.emit('close')
             this.Connections.delete(connection.JobId)
+            req.session.destroy(() => {})
             res.sendStatus(204)
         })
 
@@ -355,7 +356,7 @@ export class Server {
         const json = { data: data }
         if (options) {
             if (options.jobId) json['ServerJobId'] = options.jobId
-            if (options.placeId) json['ServerPlaceId'] = options.placeId
+            if (options.placeId) json['ServerPlaceId'] = options.placeId.toString()
         }
 
         const response = await this.sendData(JSON.stringify(json))

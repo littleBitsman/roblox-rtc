@@ -1,5 +1,4 @@
 import { EventEmitter } from 'node:events'
-import { SessionData } from 'express-session'
 import { Server } from './server'
 import { randomUUID } from 'node:crypto'
 
@@ -68,6 +67,7 @@ export class Connection {
 
     /**
      * Players in the Roblox game server where Luau (Server is this object) `game.JobId == Server.JobId` returns true.
+     * *This is a list of players' UserIDs.*
      */
     get players() { return this.Players }
 
