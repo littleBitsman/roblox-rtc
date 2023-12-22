@@ -1,7 +1,7 @@
 # roblox-rtc
 A Roblox real-time communication module between a Roblox game server and your own server.
 
-**NOTE: THE PACKAGE IS COMPLETE BUT HAS NOT BEEN TESTED. TESTING WILL BE DONE SOON.**
+**NOTE: BUGTESTING FINISHED!**
 
 ## Features
 - Send a message to a specific server.
