@@ -1,6 +1,6 @@
 {
   "name": "roblox-rtc",
-  "version": "5.1.0-beta",
+  "version": "1.0.0",
   "description": "A Roblox real-time communication module between a Roblox game server and your own server.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

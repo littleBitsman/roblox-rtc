@@ -9,6 +9,7 @@ import { Server as httpServer } from 'node:http'
 import { EventEmitter } from 'node:events'
 import { Connection } from './connection'
 import { Server as httpsServer, createServer as createHttpsServer } from 'node:https'
+import { InvalidUniverseIdError, InvalidApiKeyError, ApiKeyPermissionsError, RobloxServerError } from './exceptions'
 
 function assert(bool?: boolean, message: string = 'assertion failed!'): void | never {
     if (!bool) throw message
@@ -147,14 +148,14 @@ export class Server {
         this.serverApiKey = serverKey
 
         axios.get(`https://develop.roblox.com/v1/universes/${universeId}`).catch(() => {
-            throw 'Invalid universeId.'
+            throw new InvalidUniverseIdError()
         })
         axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunicationsTest`,
             { message: 'none' },
             { headers: { 'x-api-key': key, 'Content-Type': 'application/json' } })
             .catch((res) => {
-                if (res.response.status == 401) throw 'Invalid API key.'
-                if (res.response.status == 403) throw `This API key does not have permissions to publish to Messaging Service on universe ${universeId}.`
+                if (res.response.status == 401) throw new InvalidApiKeyError()
+                if (res.response.status == 403) throw new ApiKeyPermissionsError(universeId)
             })
         this.sessionStore = new store({ ttl: Number.MAX_SAFE_INTEGER })
         this.app.use(session({
@@ -360,9 +361,9 @@ export class Server {
         }
 
         const response = await this.sendData(JSON.stringify(json))
-        if (response.status == 401) throw 'Invalid API key or the API key does not have the required permissions to publish to Messaging Service.'
-        if (response.status == 403) throw 'Publishing to Messaging Service is not allowed on this universe/experience.'
-        if (response.status == 500) throw 'The Roblox server had an internal error.'
+        if (response.status == 401) throw new InvalidApiKeyError()
+        if (response.status == 403) throw new ApiKeyPermissionsError(this.universeId)
+        if (response.status >= 500) throw new RobloxServerError(response.status)
     }
 
     /**
@@ -395,7 +396,7 @@ export class Server {
      */
     getServerWithPlayer(userId: string | number): Connection | undefined | never {
         const searchFor = userId.toString()
-        if (isNaN(Number.parseFloat(searchFor))) throw 'Provide a valid numeric value or string as the userId.'
+        if (isNaN(Number.parseFloat(searchFor))) throw new TypeError(`Expected userId to be a string or number, got ${typeof(userId)}`)
         axios.get(`https://users.roblox.com/v1/users/${searchFor}`).catch((reason) => {
             if (reason.response.status == 404) throw 'Invalid userId.'
         })
