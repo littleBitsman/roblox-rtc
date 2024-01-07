@@ -10,9 +10,10 @@ import { EventEmitter } from 'node:events'
 import { Connection } from './connection'
 import { Server as httpsServer, createServer as createHttpsServer } from 'node:https'
 import { InvalidUniverseIdError, InvalidApiKeyError, ApiKeyPermissionsError, RobloxServerError } from './exceptions'
+import lusca from 'lusca'
 
 function assert(bool?: boolean, message: string = 'assertion failed!'): void | never {
-    if (!bool) throw message
+    if (!bool) throw new Error(message)
 }
 
 function stringSafeEqual(a?: string, b?: string) {
@@ -22,7 +23,7 @@ function stringSafeEqual(a?: string, b?: string) {
     try {
         return crypto.timingSafeEqual(Buffer.from(a, 'utf8'), Buffer.from(b, 'utf8'))
     } catch {
-        return a == b
+        return a === b
     }
 }
 
@@ -161,10 +162,10 @@ export class Server {
         this.app.use(session({
             store: this.sessionStore,
             secret: crypto.randomUUID(),
-            cookie: { secure: false },
+            cookie: { secure: true },
             resave: false,
             saveUninitialized: false
-        }), express.json())
+        }), lusca.csrf(), express.json())
 
         this.app.get('/apikey', async (_, res) => {
             await axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunicationsData`, { message: JSON.stringify({ ApiKey: serverKey }) }, {
