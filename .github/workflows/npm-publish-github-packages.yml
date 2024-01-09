@@ -18,7 +18,6 @@ jobs:
           node-version: 20
       - uses: actions/checkout@v4.1.1
       - run: npm i
-      - run: npm ci
       - run: npm run build
 
   publish-gpr:
