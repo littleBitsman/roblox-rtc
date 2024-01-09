@@ -1,16 +1,17 @@
 import express from 'express'
 import axios, { AxiosResponse } from 'axios'
 import session from 'express-session'
-import filestore from 'session-file-store'
 import { Collection } from '@discordjs/collection'
-const store = filestore(session)
 import crypto from 'node:crypto'
+import lusca from 'lusca'
+import depd from 'depd'
+const depWarn = depd('roblox-rtc')
 import { Server as httpServer } from 'node:http'
 import { EventEmitter } from 'node:events'
 import { Connection } from './connection'
 import { Server as httpsServer, createServer as createHttpsServer } from 'node:https'
 import { InvalidUniverseIdError, InvalidApiKeyError, ApiKeyPermissionsError, RobloxServerError } from './exceptions'
-import lusca from 'lusca'
+import { Player } from './player'
 
 function assert(bool?: boolean, message: string = 'assertion failed!'): void | never {
     if (!bool) throw new Error(message)
@@ -67,7 +68,11 @@ export interface CreateServerOptions extends Omit<ListenOptions, "port" | "https
     /**
      * Decides whether the cookie for the session data should be considered for HTTPS access only.
      */
-    secureCookie?: boolean
+    secureCookie?: boolean,
+    /**
+     * A session store object for `express-session` to use. **It is strongly recommended to set this to your own 
+     */
+    store?: session.Store
 }
 
 interface DataSendOptions {
@@ -134,7 +139,6 @@ export class Server {
     private readonly universeId: string
     private readonly robloxApiKey: string
     private readonly serverApiKey: string
-    private readonly sessionStore: session.Store
     private readonly key: string | Buffer | (string | Buffer)[] | undefined = undefined
     private readonly cert: string | Buffer | (string | Buffer)[] | undefined = undefined
     constructor(options: CreateServerOptions) {
@@ -163,9 +167,9 @@ export class Server {
                 if (res.response.status == 401) throw new InvalidApiKeyError()
                 if (res.response.status == 403) throw new ApiKeyPermissionsError(universeId)
             })
-        this.sessionStore = new store({ ttl: Number.MAX_SAFE_INTEGER })
+        if (!options.store) depWarn('use of default MemoryStore for express-session is deprecated')
         this.app.use(session({
-            store: this.sessionStore,
+            store: options.store,
             secret: crypto.randomUUID(),
             cookie: { secure: options.secureCookie },
             resave: false,
@@ -236,7 +240,7 @@ export class Server {
             if (!connection) return res.sendStatus(404)
             this.Streams.find((_, k) => k == connection.JobId)!.emit('close')
             this.Connections.delete(connection.JobId)
-            req.session.destroy(() => {})
+            req.session.destroy(() => { })
             res.sendStatus(204)
         })
 
@@ -400,9 +404,12 @@ export class Server {
      * @param {string | number} userId The userId of the player to search for
      * @returns The server with the player in it, or undefined if it could not be found. (See note above for more info)
      */
-    getServerWithPlayer(userId: string | number): Connection | undefined | never {
-        const searchFor = userId.toString()
-        if (isNaN(Number.parseFloat(searchFor))) throw new TypeError(`Expected userId to be a string or number, got ${typeof(userId)}`)
+    getServerWithPlayer(player: Player): Connection | undefined | never
+    getServerWithPlayer(user: string | number | Player): Connection | undefined | never {
+        var searchFor = user
+        if (user instanceof Player) searchFor = user.id 
+        searchFor = searchFor.toString()
+        if (isNaN(Number.parseFloat(searchFor))) throw new TypeError(`Expected userId to be a string or number, got ${typeof (user)}`)
         axios.get(`https://users.roblox.com/v1/users/${searchFor}`).catch((reason) => {
             if (reason.response.status == 404) throw 'Invalid userId.'
         })
@@ -419,7 +426,7 @@ export class Server {
     }
 
     /**
-     * Get a server by its assigned ID. *The ID is assigned when the server POSTs to `localhost/connect`.*
+     * Get a server by its assigned ID. *The ID is assigned when the server POSTs to `/connect`.*
      * @param {string | number | symbol} id The assigned ID of the server.
      * @returns {Connection | undefined} A server connection, or undefined if it does not exist.
      */

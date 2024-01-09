@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events'
 import { Server } from './server'
 import { randomUUID } from 'node:crypto'
+import { Player } from './player'
 
 interface ConnectionOpts {
     JobId: string,
@@ -29,7 +30,6 @@ export class Connection {
      * The `Server` that is managing this connection object.
      */
     readonly Server: Server
-    private readonly SessionId: string
     /**
      * The `Server`-assigned ID for this (game) server. Is a numeric string.
      */
@@ -41,8 +41,8 @@ export class Connection {
      * All `secret`s are unique between game servers.
      */
     readonly secret: string = randomUUID().replace('-', '')
-    private customDataVar: object | undefined = {}
-    private Players: string[] = []
+    private customDataVar: object | string | number | undefined = {}
+    private Players: Player[] = []
     /**
      * how
      * @private
@@ -50,7 +50,6 @@ export class Connection {
     constructor(opts: ConnectionOpts) {
         this.JobId = opts.JobId
         this.PlaceId = opts.PlaceId
-        this.SessionId = opts.SessionId
         this.id = opts.id
         this.Server = opts.Server
         
@@ -58,7 +57,8 @@ export class Connection {
             this.emit('message', ...data)
         })
         opts.DataStream.on('internalData', (data: InternalData) => {
-            this.Players = data.players
+            data.players.filter(v => !this.Players.find(p => p.id == v)).forEach(v => this.Players.push(new Player(v)))
+            this.Players = this.Players.filter(p => data.players.find(v => p.id == v))
         })
         opts.DataStream.on('close', () => {
             this.emit('close')
@@ -67,21 +67,17 @@ export class Connection {
 
     /**
      * Players in the Roblox game server where Luau (Server is this object) `game.JobId == Server.JobId` returns true.
-     * *This is a list of players' UserIDs.*
      */
     get players() { return this.Players }
 
     /**
-     * Custom data for this Connection. You can set custom data with `connection.setCustomData()`.
+     * Custom data for this Connection.
      */
-    get customData(): object | undefined {
+    get customData(): typeof this.customDataVar {
         return this.customDataVar
     }
 
-    /**
-     * Set custom data for this Connection. You can get custom data with `connection.getCustomData()`.
-     */
-    set setCustomData(newData: object | undefined) {
+    set customData(newData: typeof this.customDataVar) {
         this.customDataVar = newData
     }
 
