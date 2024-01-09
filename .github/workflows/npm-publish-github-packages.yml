@@ -9,20 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 20
-      - uses: actions/checkout@v4.1.1
-      - run: npm i
-      - run: npm run build
-
-  publish-gpr:
-    needs: build
+  publish-github:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -32,8 +19,30 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 20
-          registry-url: https://npm.pkg.github.com/
+      - name: Set package registry
+        run: echo @NAMESPACE:registry=https://npm.pkg.github.com >> .npmrc
       - run: npm i
+      - run: npm run build
+      - name: Remove src files
+        run: rm -r -f src
       - run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{secrets.PACKAGES_TOKEN}}
+  publish-npm:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4.1.1
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+      - run: npm i
+      - run: npm run build
+      - name: Remove src files
+        run: rm -r -f src
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.PACKAGES_TOKEN}}
+  
