@@ -63,7 +63,11 @@ export interface CreateServerOptions extends Omit<ListenOptions, "port" | "https
      * to be completely random. For this, if you want to change it at all, it is recommended to use `crypto.randomUUID()`
      * and truncate the string to be less than 16 characters.
      */
-    createId?: () => (string | symbol)
+    createId?: () => (string | symbol),
+    /**
+     * Decides whether the cookie for the session data should be considered for HTTPS access only.
+     */
+    secureCookie?: boolean
 }
 
 interface DataSendOptions {
@@ -137,6 +141,7 @@ export class Server {
         const universeId = options.universeId
         const key = options.robloxApiKey
         if (!options.serverKey) options.serverKey = makeKey(64)
+        options.secureCookie = options.secureCookie || false
         const serverKey = options.serverKey.trim()
         if (options.key) {
             this.key = options.key
@@ -162,7 +167,7 @@ export class Server {
         this.app.use(session({
             store: this.sessionStore,
             secret: crypto.randomUUID(),
-            cookie: { secure: true },
+            cookie: { secure: options.secureCookie },
             resave: false,
             saveUninitialized: false
         }), lusca.csrf(), express.json())
