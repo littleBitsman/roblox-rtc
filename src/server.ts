@@ -67,10 +67,15 @@ export interface CreateServerOptions extends Omit<ListenOptions, "port" | "https
     createId?: () => (string | symbol),
     /**
      * Decides whether the cookie for the session data should be considered for HTTPS access only.
+     * **This requires your server to be hosted with an HTTPS certificate.**
      */
     secureCookie?: boolean,
     /**
-     * A session store object for `express-session` to use. **It is strongly recommended to set this to your own 
+     * A session store object for `express-session` to use. **It is strongly recommended to set this to your own
+     * session store. The default `MemoryStore` session store will leak memory and cause problems in most cases.
+     * Not setting this value or setting it to `null` or `undefined` is deprecated.**
+     * @see https://www.npmjs.com/package/express-session#api `express-session` API documentation.
+     * @see https://www.npmjs.com/package/express-session#compatible-session-stores Other session stores you can use.
      */
     store?: session.Store
 }
