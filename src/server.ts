@@ -179,7 +179,7 @@ export class Server {
             cookie: { secure: options.secureCookie },
             resave: false,
             saveUninitialized: false
-        }), lusca.csrf(), express.json())
+        }), express.json())
 
         this.app.get('/apikey', async (_, res) => {
             await axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunicationsData`, { message: JSON.stringify({ ApiKey: serverKey }) }, {
@@ -354,17 +354,17 @@ export class Server {
     }
 
     /**
-     * Sends `data` to Roblox game servers via Roblox OpenCloud Messaging Service. 
+     * Sends `data` to Roblox game servers via Roblox Open Cloud Messaging Service. 
      * @async
      * @param {object} data The data to send with the request. *`JSON.stringify()` is executed on this automatically, so there is no need to run it yourself.*
-     * Note that if your data object has a `ApiKey` value, the `ApiKey` will be **deleted**.
+     * Note that if your data object has an `ApiKey` property, the `ApiKey` will be **deleted**.
      * A `timestamp` value is added automatically.
      * @param {DataSendOptions | undefined} options The options for the request. Note that if you do not specify any options, the data will be sent to ALL game servers.
      * 
      * Options:
      * @param {string | undefined} options.jobId Adds a filter to the request to Roblox such that only the game server where `game.JobId == jobId` will get the message.
      * @param {string | undefined} options.placeId Adds a filter to the request to Roblox such that only game servers where `game.PlaceId == placeId` will get the message. 
-     * *WARNING: If you specify the wrong place ID and you specify a job ID, the message may not be received by the server you intended. The logic on the Roblox game server side checks BOTH place ID (if the filter exists) and job ID (if the filter exists).*
+     * *WARNING: If you specify the wrong place ID and you specify a job ID, the message may not be received by the server you intended. The logic on the Roblox game server side checks BOTH place ID (when the filter exists) and job ID (when the filter exists).*
     */
     async send(data: any, options?: DataSendOptions): Promise<void> {
         if (isValidJsonString(data)) data = JSON.parse(data)
@@ -404,12 +404,12 @@ export class Server {
 
     /**
      * Get the server with the player (where `player.UserId == userId`) in it.
-     
+     * 
      * *Note: If the player is not in a server with the Roblox RTC module running in it, this will return undefined.*
-     * @param {string | number} userId The userId of the player to search for
      * @returns The server with the player in it, or undefined if it could not be found. (See note above for more info)
      */
     getServerWithPlayer(player: Player): Connection | undefined | never
+    getServerWithPlayer(userId: string | number): Connection | undefined | never
     getServerWithPlayer(user: string | number | Player): Connection | undefined | never {
         var searchFor = user
         if (user instanceof Player) searchFor = user.id 
@@ -418,7 +418,7 @@ export class Server {
         axios.get(`https://users.roblox.com/v1/users/${searchFor}`).catch((reason) => {
             if (reason.response.status == 404) throw 'Invalid userId.'
         })
-        return this.Connections.find((conn) => conn.players.find((id) => searchFor == id))
+        return this.Connections.find(conn => conn.players.find(id => searchFor == id) != undefined)
     }
 
     /**
@@ -487,6 +487,7 @@ export class Server {
                     cert: this.cert || opts.cert
                 }, this.app).listen(opts.port || opts.httpsPort, callback)
             } else return this.app.listen(opts.port, callback)
-        } else return this.app.listen(opts, callback)
+        } else if (typeof opts == 'number') return this.app.listen(opts, callback)
+        else throw new TypeError(`Invalid parameter 0 to Server.listen(): Expected number, bigint, or object, got ${typeof opts}`)
     }
 }

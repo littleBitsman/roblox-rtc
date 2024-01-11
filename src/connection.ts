@@ -96,11 +96,12 @@ export class Connection {
      * Adds the `listener` function to the end of the listeners array for the event named `event`. 
      * No checks are made to see if the `listener` has already been added. 
      * Multiple calls passing the same combination of `event` and `listener` will result in the `listener` being added, and called, multiple times. 
+     * **Note: No checks are made to make sure that any data (if applicable), is actually coherent to the type `T`. You must implement your own logic for this.**
      * @param {string} event The event that the listener function will listen for.
      * @param listener The listener function to add to the listener array.
      * @returns {ThisType} This, so that calls can be chained.
      */
-    on(event: 'message', listener: (data: object) => void): this
+    on<T extends any>(event: 'message', listener: (data: Partial<T | undefined>) => void): this
     on(event: 'close', listener: () => void): this
     on(event: string, listener: (...params: any[]) => void): this {
         this.eventStream.on(event, listener)
@@ -111,11 +112,12 @@ export class Connection {
      * Adds the `listener` function to the *beginning* of the listeners array for the event named `event`. 
      * No checks are made to see if the `listener` has already been added. 
      * Multiple calls passing the same combination of `event` and `listener` will result in the `listener` being added, and called, multiple times. 
+     * **Note: No checks are made to make sure that any data (if applicable), is actually coherent to the type `T`. You must implement your own logic for this.**
      * @param {string} event The event that the listener function will listen for.
      * @param listener The listener function to add to the listener array.
      * @returns {ThisType} This, so that calls can be chained.
      */
-    prependListener(event: 'message', listener: (data: object) => void): this
+    prependListener<T extends any>(event: 'message', listener: (data: Partial<T | undefined>) => void): this
     prependListener(event: 'close', listener: () => void): this
     prependListener(event: string, listener: (...params: any[]) => void): this {
         this.eventStream.prependListener(event, listener)
@@ -125,7 +127,7 @@ export class Connection {
     /**
      * Alias for `Connection.on(event, listener)`.
      */
-    addListener(event: 'message', listener: (data: object) => void): this
+    addListener<T extends any>(event: 'message', listener: (data: Partial<T | undefined>) => void): this
     addListener(event: 'close', listener: () => void): this 
     addListener(event: string, listener: (...params: any[]) => void): this {
         this.eventStream.addListener(event, listener)
@@ -134,12 +136,13 @@ export class Connection {
 
     /**
      * Adds a **one-time** `listener` function for the event named `event`. The next time `event` is triggered, this listener is removed and *then* invoked.
+     * **Note: No checks are made to make sure that any data (if applicable), is actually coherent to the type `T`. You must implement your own logic for this.**
      * 
      * @param {string} event The event that the listener function will listen for.
      * @param listener The listener function to add to the listener array.
      * @returns {ThisType} This, so that calls can be chained.
      */
-    once(event: 'message', listener: (data: object) => void): this
+    once<T extends any>(event: 'message', listener: (data: Partial<T | undefined>) => void): this
     once(event: 'close', listener: () => void): this 
     once(event: string, listener: (...params: any[]) => void): this {
         this.eventStream.once(event, listener)
@@ -148,12 +151,13 @@ export class Connection {
 
     /**
      * Adds a **one-time** `listener` function for the event named `event` to the *beginning* of the listeners array. The next time `event` is triggered, this listener is removed and *then* invoked.
+     * **Note: No checks are made to make sure that any data (if applicable), is actually coherent to the type `T`. You must implement your own logic for this.**
      * 
      * @param {string} event The event that the listener function will listen for.
      * @param listener The listener function to add to the listener array.
      * @returns {ThisType} This, so that calls can be chained.
      */
-    prependOnceListener(event: 'message', listener: (data: object) => void): this
+    prependOnceListener<T extends any>(event: 'message', listener: (data: Partial<T | undefined>) => void): this
     prependOnceListener(event: 'close', listener: () => void): this 
     prependOnceListener(event: string, listener: (...params: any[]) => void): this {
         this.eventStream.prependOnceListener(event, listener)
@@ -169,7 +173,7 @@ export class Connection {
      * @param listener The listener function to be removed.
      * @returns {ThisType} This, so that calls can be chained.
      */
-    removeListener(event: 'message', listener: (data: object) => void): this
+    removeListener<T extends any>(event: 'message', listener: (data: Partial<T | undefined>) => void): this
     removeListener(event: 'close', listener: () => void): this
     removeListener(event: string, listener: (...params: any[]) => void): this {
         this.eventStream.removeListener(event, listener)
