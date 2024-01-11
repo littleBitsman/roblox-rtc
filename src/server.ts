@@ -3,7 +3,6 @@ import axios, { AxiosResponse } from 'axios'
 import session from 'express-session'
 import { Collection } from '@discordjs/collection'
 import crypto from 'node:crypto'
-import lusca from 'lusca'
 import depd from 'depd'
 const depWarn = depd('roblox-rtc')
 import { Server as httpServer } from 'node:http'
