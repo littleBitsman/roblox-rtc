@@ -90,7 +90,7 @@ export class Player {
      * Fetches all player data by `id` from the Roblox Users API.
      * @async
      */
-    async fetch(): Promise<void> {
+    async fetch(): Promise<this> {
         const res = await axios.get(`https://users.roblox.com/v1/users/${this.id}`)
         const data = res.data
         this._created = new Date(data.created)
@@ -100,5 +100,6 @@ export class Player {
         this._name = data.name
 
         this._isPartial = !!(this._created && this._description && this._isBanned && this._displayName && this._name)
+        return this
     }
 }
