@@ -9,3 +9,4 @@ test/*
 tsconfig.json
 examples
 roblox-docs
+node_modules
