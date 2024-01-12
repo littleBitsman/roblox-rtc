@@ -17,7 +17,7 @@ export class ApiKeyPermissionsError extends Error {
 import { STATUS_CODES } from 'node:http'
 export class RobloxServerError extends Error {
     constructor(errorCode: number) {
-        if (errorCode < 500 || errorCode > 600) throw new RangeError()
+        if (errorCode < 500 || errorCode > 599) throw new RangeError()
         super(`The Roblox server responded with HTTP ${errorCode}: ${STATUS_CODES[errorCode]}`)
     }
 }
