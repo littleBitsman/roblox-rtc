@@ -65,22 +65,9 @@ export interface CreateServerOptions extends Omit<ListenOptions, "port" | "https
      */
     createId?: () => (string | symbol),
     /**
-     * Decides whether the cookie for the session data should be considered for HTTPS access only.
-     * **This requires your server to be hosted with an HTTPS certificate.**
+     * Options for the session.
      */
-    secureCookie?: boolean,
-    /**
-     * A session store object for `express-session` to use. **It is strongly recommended to set this to your own
-     * session store. The default `MemoryStore` session store will leak memory and cause problems in most cases.
-     * Not setting this value or setting it to `null` or `undefined` is deprecated.**
-     * @see https://www.npmjs.com/package/express-session#api `express-session` API documentation.
-     * @see https://www.npmjs.com/package/express-session#compatible-session-stores Other session stores you can use.
-     */
-    store?: session.Store,
-    /**
-     * 
-     */
-    app?: express.Application,
+    sessionOpts?: session.SessionOptions,
     /**
      * 
      */
@@ -158,9 +145,8 @@ export class Server {
         const universeId = options.universeId
         const key = options.robloxApiKey
         if (!options.serverKey) options.serverKey = makeKey(64)
-        options.secureCookie = options.secureCookie || false
         const serverKey = options.serverKey.trim()
-        this.app = options.app || express()
+        this.app = express()
         this.router = options.router || express.Router()
 
         if (options.key)
@@ -181,13 +167,10 @@ export class Server {
                 if (res.response.status == 401) throw new InvalidApiKeyError()
                 if (res.response.status == 403) throw new ApiKeyPermissionsError(universeId)
             })
-        if (!options.store) depWarn('use of default MemoryStore for express-session is deprecated')
         this.router.use(session({
-            store: options.store,
             secret: crypto.randomUUID(),
-            cookie: { secure: options.secureCookie },
-            resave: false,
-            saveUninitialized: false
+            saveUninitialized: false,
+            ...options.sessionOpts
         }), express.json())
 
         this.router.get('/apikey', async (_, res) => {
@@ -422,7 +405,7 @@ export class Server {
     getServerWithPlayer(userId: string | number): Connection | undefined | never
     getServerWithPlayer(user: string | number | Player): Connection | undefined | never {
         var searchFor = user
-        if (user instanceof Player) searchFor = user.id 
+        if (user instanceof Player) searchFor = user.id
         searchFor = searchFor.toString()
         if (isNaN(Number.parseFloat(searchFor))) throw new TypeError(`Expected userId to be a string or number, got ${typeof (user)}`)
         axios.get(`https://users.roblox.com/v1/users/${searchFor}`).catch((reason) => {
@@ -485,7 +468,7 @@ export class Server {
     listen(port: number, callback: () => void): httpServer
     listen(options: ListenOptions, callback: () => void): httpServer | httpsServer
     listen(opts: number | ListenOptions, callback?: () => void): httpServer | httpsServer {
-        if (Object.getPrototypeOf(this.app) == express.Router) 
+        if (Object.getPrototypeOf(this.app) == express.Router)
             throw new Error('Routers cannot listen on a port')
         if (typeof opts == 'object' && Object.getPrototypeOf(this.app) == express) {
             if (opts.httpsPort) {
