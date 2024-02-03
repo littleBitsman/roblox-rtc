@@ -76,7 +76,15 @@ export interface CreateServerOptions extends Omit<ListenOptions, "port" | "https
      * @see https://www.npmjs.com/package/express-session#api `express-session` API documentation.
      * @see https://www.npmjs.com/package/express-session#compatible-session-stores Other session stores you can use.
      */
-    store?: session.Store
+    store?: session.Store,
+    /**
+     * 
+     */
+    app?: express.Application,
+    /**
+     * 
+     */
+    router?: express.Router
 }
 
 interface DataSendOptions {
@@ -136,7 +144,8 @@ function makeKey(length: number = 16) {
 }
 
 export class Server {
-    private readonly app = express()
+    private readonly app: express.Application
+    readonly router: express.Router
     private eventStream = new EventEmitter()
     private readonly Connections: Collection<string, Connection> = new Collection()
     private readonly Streams: Collection<string, EventEmitter> = new Collection()
@@ -151,12 +160,13 @@ export class Server {
         if (!options.serverKey) options.serverKey = makeKey(64)
         options.secureCookie = options.secureCookie || false
         const serverKey = options.serverKey.trim()
-        if (options.key) {
+        this.app = options.app || express()
+        this.router = options.router || express.Router()
+
+        if (options.key)
             this.key = options.key
-        }
-        if (options.cert) {
+        if (options.cert)
             this.cert = options.cert
-        }
         this.universeId = universeId
         this.robloxApiKey = key
         this.serverApiKey = serverKey
@@ -172,7 +182,7 @@ export class Server {
                 if (res.response.status == 403) throw new ApiKeyPermissionsError(universeId)
             })
         if (!options.store) depWarn('use of default MemoryStore for express-session is deprecated')
-        this.app.use(session({
+        this.router.use(session({
             store: options.store,
             secret: crypto.randomUUID(),
             cookie: { secure: options.secureCookie },
@@ -180,13 +190,13 @@ export class Server {
             saveUninitialized: false
         }), express.json())
 
-        this.app.get('/apikey', async (_, res) => {
+        this.router.get('/apikey', async (_, res) => {
             await axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunicationsData`, { message: JSON.stringify({ ApiKey: serverKey }) }, {
                 headers: { 'x-api-key': key, 'Content-Type': 'application/json' }
             })
             res.status(200).send()
         })
-        this.app.post('/connect', async (req, res) => {
+        this.router.post('/connect', async (req, res) => {
             if (!req.get('API-Key') || req.get('API-Key')?.trim() != serverKey) return res.sendStatus(401)
             const JobId = req.get('Roblox-JobId')
             if (!JobId) return res.sendStatus(400)
@@ -217,7 +227,7 @@ export class Server {
                 id: conn.id
             })
         })
-        this.app.post('/servers/:serverId/internalData', (req, res) => {
+        this.router.post('/servers/:serverId/internalData', (req, res) => {
             const __a = this.validateRequest(req)
             if (__a != true) return res.sendStatus(__a)
             if (!req.get('data-type') || req.get('data-type') != 'internal') return res.sendStatus(400)
@@ -227,7 +237,7 @@ export class Server {
             this.Streams.find((_, k) => k == connection.JobId)!.emit('internalData', req.body.data)
             res.sendStatus(204)
         })
-        this.app.post('/servers/:serverId/data', (req, res) => {
+        this.router.post('/servers/:serverId/data', (req, res) => {
             const __a = this.validateRequest(req)
             if (__a != true) return res.sendStatus(__a)
             const serverId = req.params.serverId
@@ -236,7 +246,7 @@ export class Server {
             this.Streams.find((_, k) => k == connection.JobId)!.emit('data', req.body.data)
             res.sendStatus(204)
         })
-        this.app.post('/servers/:serverId/close', (req, res) => {
+        this.router.post('/servers/:serverId/close', (req, res) => {
             const __a = this.validateRequest(req)
             if (__a != true) return res.sendStatus(__a)
             const serverId = req.params.serverId
@@ -248,6 +258,7 @@ export class Server {
             res.sendStatus(204)
         })
 
+        this.app.use(this.router)
     }
 
     private validateRequest(req: express.Request) {
@@ -474,7 +485,9 @@ export class Server {
     listen(port: number, callback: () => void): httpServer
     listen(options: ListenOptions, callback: () => void): httpServer | httpsServer
     listen(opts: number | ListenOptions, callback?: () => void): httpServer | httpsServer {
-        if (typeof opts == 'object') {
+        if (Object.getPrototypeOf(this.app) == express.Router) 
+            throw new Error('Routers cannot listen on a port')
+        if (typeof opts == 'object' && Object.getPrototypeOf(this.app) == express) {
             if (opts.httpsPort) {
                 return createHttpsServer({
                     key: opts.key,
