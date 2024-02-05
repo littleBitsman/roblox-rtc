@@ -3,8 +3,6 @@ import axios, { AxiosResponse } from 'axios'
 import session from 'express-session'
 import { Collection } from '@discordjs/collection'
 import crypto from 'node:crypto'
-import depd from 'depd'
-const depWarn = depd('roblox-rtc')
 import { Server as httpServer } from 'node:http'
 import { EventEmitter } from 'node:events'
 import { Connection } from './connection'
@@ -149,10 +147,9 @@ export class Server {
         this.app = express()
         this.router = options.router || express.Router()
 
-        if (options.key)
-            this.key = options.key
-        if (options.cert)
-            this.cert = options.cert
+        this.key = options.key
+        this.cert = options.cert
+
         this.universeId = universeId
         this.robloxApiKey = key
         this.serverApiKey = serverKey
@@ -177,14 +174,14 @@ export class Server {
             await axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${universeId}/topics/RealTimeCommunicationsData`, { message: JSON.stringify({ ApiKey: serverKey }) }, {
                 headers: { 'x-api-key': key, 'Content-Type': 'application/json' }
             })
-            res.status(200).send()
+            res.sendStatus(204)
         })
         this.router.post('/connect', async (req, res) => {
             if (!req.get('API-Key') || req.get('API-Key')?.trim() != serverKey) return res.sendStatus(401)
             const JobId = req.get('Roblox-JobId')
             if (!JobId) return res.sendStatus(400)
-            if (this.Connections.has(JobId)) return res.status(403).json({
-                'error-code': 403,
+            if (this.Connections.has(JobId)) return res.status(409).json({
+                'error-code': 409,
                 error: 'This server (that made this request) has already requested a connection previously and has not closed it.'
             })
 
