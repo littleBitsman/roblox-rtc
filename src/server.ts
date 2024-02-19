@@ -139,7 +139,8 @@ export class Server {
     private readonly serverApiKey: string
     private readonly key: string | Buffer | (string | Buffer)[] | undefined = undefined
     private readonly cert: string | Buffer | (string | Buffer)[] | undefined = undefined
-    constructor(options: CreateServerOptions) {
+    constructor(options?: CreateServerOptions) {
+        if (!options) throw new TypeError('You must specify options (universeId and robloxApiKey are required). Expected: object, got: undefined')
         const universeId = options.universeId
         const key = options.robloxApiKey
         if (!options.serverKey) options.serverKey = makeKey(64)
