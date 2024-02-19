@@ -8,7 +8,7 @@ import { EventEmitter } from 'node:events'
 import { Connection } from './connection'
 import { Server as httpsServer, createServer as createHttpsServer } from 'node:https'
 import { InvalidUniverseIdError, InvalidApiKeyError, ApiKeyPermissionsError, RobloxServerError } from './exceptions'
-import { Player } from './player'
+import { getPlayer, Player } from './player'
 
 function assert(bool?: boolean, message: string = 'assertion failed!'): void | never {
     if (!bool) throw new Error(message)

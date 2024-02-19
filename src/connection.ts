@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events'
 import { Server } from './server'
 import { randomUUID } from 'node:crypto'
-import { Player } from './player'
+import { getPlayer, Player } from './player'
 
 interface ConnectionOpts {
     JobId: string,
@@ -57,8 +57,14 @@ export class Connection {
             this.emit('message', ...data)
         })
         opts.DataStream.on('internalData', (data: InternalData) => {
-            data.players.filter(v => !this.Players.find(p => p.id == v)).forEach(v => this.Players.push(new Player(v)))
-            this.Players = this.Players.filter(p => data.players.find(v => p.id == v))
+            data.players.filter(v => !this.Players.find(p => p.id == v)).forEach(v => {
+                this.eventStream.emit('playerAdded', this.Players.push(getPlayer(v)))
+            })
+            this.Players = this.Players.filter(p => {
+                const b = data.players.find(v => p.id == v)
+                if (!b) this.eventStream.emit('playerRemoving', p)
+                return b
+            })
         })
         opts.DataStream.on('close', () => {
             this.emit('close')
@@ -103,6 +109,7 @@ export class Connection {
      */
     on<T extends any>(event: 'message', listener: (data: Partial<T | undefined>) => void): this
     on(event: 'close', listener: () => void): this
+    on(event: 'playerAdded' | 'playerRemoving', listener: (player: Player) => void): this
     on(event: string, listener: (...params: any[]) => void): this {
         this.eventStream.on(event, listener)
         return this
@@ -119,6 +126,7 @@ export class Connection {
      */
     prependListener<T extends any>(event: 'message', listener: (data: Partial<T | undefined>) => void): this
     prependListener(event: 'close', listener: () => void): this
+    prependListener(event: 'playerAdded' | 'playerRemoving', listener: (player: Player) => void): this
     prependListener(event: string, listener: (...params: any[]) => void): this {
         this.eventStream.prependListener(event, listener)
         return this
@@ -129,6 +137,7 @@ export class Connection {
      */
     addListener<T extends any>(event: 'message', listener: (data: Partial<T | undefined>) => void): this
     addListener(event: 'close', listener: () => void): this 
+    addListener(event: 'playerAdded' | 'playerRemoving', listener: (player: Player) => void): this
     addListener(event: string, listener: (...params: any[]) => void): this {
         this.eventStream.addListener(event, listener)
         return this
@@ -144,6 +153,7 @@ export class Connection {
      */
     once<T extends any>(event: 'message', listener: (data: Partial<T | undefined>) => void): this
     once(event: 'close', listener: () => void): this 
+    once(event: 'playerAdded' | 'playerRemoving', listener: (player: Player) => void): this
     once(event: string, listener: (...params: any[]) => void): this {
         this.eventStream.once(event, listener)
         return this
@@ -159,6 +169,7 @@ export class Connection {
      */
     prependOnceListener<T extends any>(event: 'message', listener: (data: Partial<T | undefined>) => void): this
     prependOnceListener(event: 'close', listener: () => void): this 
+    prependOnceListener(event: 'playerAdded' | 'playerRemoving', listener: (player: Player) => void): this
     prependOnceListener(event: string, listener: (...params: any[]) => void): this {
         this.eventStream.prependOnceListener(event, listener)
         return this
@@ -175,6 +186,7 @@ export class Connection {
      */
     removeListener<T extends any>(event: 'message', listener: (data: Partial<T | undefined>) => void): this
     removeListener(event: 'close', listener: () => void): this
+    removeListener(event: 'playerAdded' | 'playerRemoving', listener: (player: Player) => void): this
     removeListener(event: string, listener: (...params: any[]) => void): this {
         this.eventStream.removeListener(event, listener)
         return this

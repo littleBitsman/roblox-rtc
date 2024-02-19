@@ -1,4 +1,8 @@
 import axios from 'axios'
+import { Collection } from '@discordjs/collection'
+
+const PlayerCache = new Collection<string, Player>()
+
 export class Player {
     private _id: string
     private _isPartial: boolean = true
@@ -102,4 +106,10 @@ export class Player {
         this._isPartial = !!(this._created && this._description && this._isBanned && this._displayName && this._name)
         return this
     }
+}
+
+export function getPlayer(id: string | number | symbol): Player {
+    id = id.toString()
+    if (PlayerCache.has(id)) return PlayerCache.get(id)!
+    else return new Player(id)
 }
