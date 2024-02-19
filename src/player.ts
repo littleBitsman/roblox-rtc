@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { Collection } from '@discordjs/collection'
 
-const PlayerCache = new Collection<string, Player>()
+export const PlayerCache = new Collection<string, Player>()
 
 export class Player {
     private _id: string
