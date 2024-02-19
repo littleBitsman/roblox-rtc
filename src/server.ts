@@ -67,7 +67,7 @@ export interface CreateServerOptions extends Omit<ListenOptions, "port" | "https
      */
     sessionOpts?: session.SessionOptions,
     /**
-     * 
+     * The router to use instead of instantiating a new one.
      */
     router?: express.Router
 }

@@ -58,7 +58,8 @@ export class Connection {
         })
         opts.DataStream.on('internalData', (data: InternalData) => {
             data.players.filter(v => !this.Players.find(p => p.id == v)).forEach(v => {
-                this.eventStream.emit('playerAdded', this.Players.push(getPlayer(v)))
+                this.Players.push(getPlayer(v))
+                this.eventStream.emit('playerAdded', getPlayer(v))
             })
             this.Players = this.Players.filter(p => {
                 const b = data.players.find(v => p.id == v)

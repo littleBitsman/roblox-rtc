@@ -17,6 +17,7 @@ export class Player {
      */
     constructor(id: string | number | symbol) {
         this._id = id.toString()
+        PlayerCache.set(id.toString(), this)
     }
     /**
      * The player's user ID.
