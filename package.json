@@ -1,7 +1,7 @@
 {
   "name": "roblox-rtc",
-  "version": "1.1.6",
-  "description": "A Roblox real-time communication module between a Roblox game server and your own server.",
+  "version": "1.2.0",
+  "description": "A Roblox (near) real-time communication module between a Roblox game server and your own server.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

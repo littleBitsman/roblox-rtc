@@ -8,10 +8,22 @@ import { EventEmitter } from 'node:events'
 import { Connection } from './connection'
 import { Server as httpsServer, createServer as createHttpsServer } from 'node:https'
 import { InvalidUniverseIdError, InvalidApiKeyError, ApiKeyPermissionsError, RobloxServerError } from './exceptions'
+import { isDeepStrictEqual } from 'node:util'
 import { getPlayer, Player } from './player'
+
+type JSONable = string | symbol | number | object
 
 function assert(bool?: boolean, message: string = 'assertion failed!'): void | never {
     if (!bool) throw new Error(message)
+}
+
+function safeEqual(a?: Buffer, b?: Buffer) {
+    if (!a || !b) return false
+    try {
+        return crypto.timingSafeEqual(a, b)
+    } catch {
+        return false
+    }
 }
 
 function stringSafeEqual(a?: string, b?: string) {
@@ -194,7 +206,7 @@ export class Server {
                 PlaceId: PlaceId,
                 SessionId: req.sessionID,
                 Server: this,
-                id: options.createId ? options.createId().toString().trim().substring(0, 16) : this.Connections.size.toString(),
+                id: options.createId ? options.createId().toString().trim().substring(0, 16) : crypto.randomUUID(),
                 DataStream: stream
             })
             req.session['JobId'] = JobId
@@ -209,8 +221,7 @@ export class Server {
             })
         })
         this.router.post('/servers/:serverId/internalData', (req, res) => {
-            const __a = this.validateRequest(req)
-            if (__a != true) return res.sendStatus(__a)
+            if (!this.validateRequest(req, res)) return
             if (!req.get('data-type') || req.get('data-type') != 'internal') return res.sendStatus(400)
             const serverId = req.params.serverId
             const connection = this.getServerById(serverId)
@@ -219,8 +230,7 @@ export class Server {
             res.sendStatus(204)
         })
         this.router.post('/servers/:serverId/data', (req, res) => {
-            const __a = this.validateRequest(req)
-            if (__a != true) return res.sendStatus(__a)
+            if (!this.validateRequest(req, res)) return
             const serverId = req.params.serverId
             const connection = this.getServerById(serverId)
             if (!connection) return res.sendStatus(404)
@@ -228,8 +238,7 @@ export class Server {
             res.sendStatus(204)
         })
         this.router.post('/servers/:serverId/close', (req, res) => {
-            const __a = this.validateRequest(req)
-            if (__a != true) return res.sendStatus(__a)
+            if (!this.validateRequest(req, res)) return 
             const serverId = req.params.serverId
             const connection = this.Connections.find((v) => v.id == serverId)
             if (!connection) return res.sendStatus(404)
@@ -242,22 +251,43 @@ export class Server {
         this.app.use(this.router)
     }
 
-    private validateRequest(req: express.Request) {
-        if (!stringSafeEqual(req.get('API-Key'), this.serverApiKey)) return 401
-
-        const conn = this.Connections.find((conn) => conn.id == req.params['serverId'])
-        if (!conn) return 404
-
-        if (req.body) {
-            if (!req.get('data-signature')) return 401
-            const headerHash = req.get('data-signature')!.split('=')[1]!
-            const calcHash = crypto.createHmac('sha256', calculateHmacKey(conn)!).update(JSON.stringify(req.body)).digest()
-            if (!crypto.timingSafeEqual(Buffer.from(headerHash, 'hex'), calcHash)) return 401
+    private validateRequest(req: express.Request, res: express.Response) {
+        if (!stringSafeEqual(req.get('API-Key'), this.serverApiKey)) {
+            res.sendStatus(401)
+            return false
         }
 
-        if (!stringSafeEqual(req.get('Roblox-JobId'), conn.JobId) || !stringSafeEqual(req.get('Roblox-JobId'), req.session['JobId'])) return 401
-        if (!stringSafeEqual(req.get('Roblox-PlaceId'), conn.PlaceId) || !stringSafeEqual(req.get('Roblox-PlaceId'), req.session['PlaceId'])) return 401
-        if (req.session['ServerId'] != conn.id) return 401
+        const conn = this.Connections.find((conn) => conn.id == req.params['serverId'])
+        if (!conn) {
+            res.sendStatus(404)
+            return false
+        }
+
+        if (req.body && !isDeepStrictEqual(req.body, {})) {
+            if (!req.get('data-signature')) {
+                res.sendStatus(401)
+                return false
+            }
+            const headerHash = req.get('data-signature')!.split('=')[1]!
+            const calcHash = crypto.createHmac('sha256', calculateHmacKey(conn)!).update(JSON.stringify(req.body)).digest()
+            if (!safeEqual(Buffer.from(headerHash, 'hex'), calcHash)) {
+                res.sendStatus(401)
+                return false
+            }
+        }
+
+        if (!stringSafeEqual(req.get('Roblox-JobId'), conn.JobId) || !stringSafeEqual(req.get('Roblox-JobId'), req.session['JobId'])) {
+            res.sendStatus(401)
+            return false
+        }
+        if (!stringSafeEqual(req.get('Roblox-PlaceId'), conn.PlaceId) || !stringSafeEqual(req.get('Roblox-PlaceId'), req.session['PlaceId'])) {
+            res.sendStatus(401)
+            return false
+        }
+        if (req.session['ServerId'] != conn.id) {
+            res.sendStatus(401)
+            return false
+        }
 
         return true
     }
@@ -357,10 +387,11 @@ export class Server {
      * @param {string | undefined} options.placeId Adds a filter to the request to Roblox such that only game servers where `game.PlaceId == placeId` will get the message. 
      * *WARNING: If you specify the wrong place ID and you specify a job ID, the message may not be received by the server you intended. The logic on the Roblox game server side checks BOTH place ID (when the filter exists) and job ID (when the filter exists).*
     */
-    async send(data: any, options?: DataSendOptions): Promise<void> {
-        if (isValidJsonString(data)) data = JSON.parse(data)
-        if (data['ApiKey']) delete data.ApiKey
-        const json = { data: data }
+    async send(data: JSONable, options?: DataSendOptions): Promise<void> {
+        if (!data) throw new TypeError('data must not be undefined/null')
+        if (isValidJsonString(data) && typeof data == 'string') data = JSON.parse(data)
+        if (typeof data == 'object' && data['ApiKey']) delete data['ApiKey']
+        const json = { data: data, timestamp: false }
         if (options) {
             if (options.jobId) json['ServerJobId'] = options.jobId
             if (options.placeId) json['ServerPlaceId'] = options.placeId.toString()

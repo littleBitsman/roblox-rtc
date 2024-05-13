@@ -92,7 +92,7 @@ export class Connection {
      * Send data to the server represented by this object. *Note: The* `jobId` *and* `placeId` *are handled for you.*
      * @param {object} data The data to send.
      */
-    send(data: object) {
+    async send(data: object) {
         return this.Server.send(data, {
             jobId: this.JobId,
             placeId: this.PlaceId
