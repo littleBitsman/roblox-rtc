@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events'
-import { Server } from './server'
+import { JSONable, Server } from './server'
 import { randomUUID } from 'node:crypto'
 import { getPlayer, Player } from './player'
 
@@ -31,7 +31,7 @@ export class Connection {
      */
     readonly Server: Server
     /**
-     * The `Server`-assigned ID for this (game) server. Is a numeric string.
+     * The `Server`-assigned ID for this (game) server. The schema of this is undefined.
      */
     readonly id: string
     /**
@@ -92,7 +92,7 @@ export class Connection {
      * Send data to the server represented by this object. *Note: The* `jobId` *and* `placeId` *are handled for you.*
      * @param {object} data The data to send.
      */
-    async send(data: object) {
+    async send(data: JSONable | any) {
         return this.Server.send(data, {
             jobId: this.JobId,
             placeId: this.PlaceId

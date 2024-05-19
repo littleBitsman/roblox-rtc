@@ -1,30 +1,44 @@
 import axios from 'axios'
-import { Collection } from '@discordjs/collection'
 
-export const PlayerCache = new Collection<string, Player>()
+export const PlayerCache = new Map<string, InternalPlayer>()
+
+interface InternalPlayer {
+    id: string,
+    name?: string,
+    displayName?: string,
+    created?: Date,
+    description?: string,
+    isBanned?: boolean,
+    isPartial: boolean
+}
+
+type ID = string | number | symbol
 
 export class Player {
     private _id: string
-    private _isPartial: boolean = true
-    private _name?: string
-    private _displayName?: string
-    private _created?: Date
-    private _description?: string
-    private _isBanned?: boolean
+    private selfData?: InternalPlayer
     /**
      * how
      * @private
      */
-    constructor(id: string | number | symbol) {
+    constructor(id: ID) {
         this._id = id.toString()
-        PlayerCache.set(id.toString(), this)
+        if (!PlayerCache.has(id.toString())) PlayerCache.set(id.toString(), { id: id.toString(), isPartial: true })
+    }
+
+    private get data(): InternalPlayer {
+        if (!this.selfData) 
+            this.selfData = PlayerCache.get(this.id)!
+
+        return this.selfData
     }
     /**
      * The player's user ID.
      */
-    get id() {
+    get id(): string {
         return this._id
     }
+
     /**
      * The username of the Roblox player associated with user ID `this.id`.
      * 
@@ -35,8 +49,9 @@ export class Player {
      * @returns {string | undefined} The player's display name, or undefined if the data was not `fetch()`'d.
      */
     get name(): string | undefined {
-        return this._name
+        return this.data.name
     }
+
     /**
      * The display name of the Roblox player associated with user ID `this.id`.
      * 
@@ -47,35 +62,39 @@ export class Player {
      * @returns {string | undefined} The player's display name, or undefined if the data was not `fetch()`'d.
      */
     get displayName(): string | undefined {
-        return this._displayName
+        return this.data.displayName
     }
+
     /**
      * The Date when the Roblox player associated with user ID `this.id` was created.
      * @returns {Date | undefined} A Date defining when this player was created, or undefined if the data was not `fetch()`'d.
      */
     get created(): Date | undefined {
-        return this._created
+        return this.data.created
     }
+
     /**
      * The description text of the player on their profile page.
      * @returns {string | undefined} The description text of this player on their profile page, or undefined if the data was not `fetch()`'d.
      */
     get description(): string | undefined {
-        return this._description
+        return this.data.description
     }
+
     /**
      * A boolean that shows if the Roblox player associated with the user ID `this.id` is banned (terminated) or not.
      * @returns {boolean | undefined} A boolean defining if this player is banned, or undefined if the data was not `fetch()`'d.
      */
     get isBanned(): boolean | undefined {
-        return this._isBanned
+        return this.data.isBanned
     }
+    
     /**
      * A boolean defining whether this `Player` object has all the properties available.
      * Set to `false` after `Player.fetch()` is called successfully.
      */
     get isPartial() {
-        return this._isPartial
+        return this.data.isPartial
     }
 
     /**
@@ -98,19 +117,24 @@ export class Player {
     async fetch(): Promise<this> {
         const res = await axios.get(`https://users.roblox.com/v1/users/${this.id}`)
         const data = res.data
-        this._created = new Date(data.created)
-        this._description = data.description
-        this._isBanned = data.isBanned
-        this._displayName = data.displayName
-        this._name = data.name
+        this.data.created = new Date(data.created)
+        this.data.description = data.description
+        this.data.isBanned = data.isBanned
+        this.data.displayName = data.displayName
+        this.data.name = data.name
 
-        this._isPartial = !!(this._created && this._description && this._isBanned && this._displayName && this._name)
+        this.data.isPartial = !!(this.data.created && this.data.description && this.data.isBanned && this.data.displayName && this.data.name)
         return this
+    }
+
+    static get(id: ID): Player {
+        return getPlayer(id)
+    }
+    static new(id: ID): Player {
+        return getPlayer(id)
     }
 }
 
-export function getPlayer(id: string | number | symbol): Player {
-    id = id.toString()
-    if (PlayerCache.has(id)) return PlayerCache.get(id)!
-    else return new Player(id)
+export function getPlayer(id: ID): Player {
+    return new Player(id.toString())
 }
