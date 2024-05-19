@@ -93,7 +93,11 @@ interface DataSendOptions {
     /**
      * Adds a filter to the request to Roblox such that only the server with this `jobId` will get the message.
      */
-    jobId?: string
+    jobId?: string,
+    /**
+     * The name of the event to fire on the Roblox side.
+     */
+    eventName?: string
 }
 
 interface ListenOptions {
@@ -375,7 +379,7 @@ export class Server {
     }
 
     /**
-     * Sends `data` to Roblox game servers via Roblox Open Cloud Messaging Service. 
+     * Sends `data` to Roblox game servers via the Roblox Open Cloud Messaging Service. 
      * @async
      * @param {object} data The data to send with the request. *`JSON.stringify()` is executed on this automatically, so there is no need to run it yourself.*
      * Note that if your data object has an `ApiKey` property, the `ApiKey` will be **deleted**.
@@ -387,14 +391,15 @@ export class Server {
      * @param {string | undefined} options.placeId Adds a filter to the request to Roblox such that only game servers where `game.PlaceId == placeId` will get the message. 
      * *WARNING: If you specify the wrong place ID and you specify a job ID, the message may not be received by the server you intended. The logic on the Roblox game server side checks BOTH place ID (when the filter exists) and job ID (when the filter exists).*
     */
-    async send(data: JSONable | any, options?: DataSendOptions): Promise<void> {
+    async send(data: JSONable, options?: DataSendOptions): Promise<void> {
         if (!data) throw new TypeError('data must not be undefined/null')
         if (isValidJsonString(data) && typeof data == 'string') data = JSON.parse(data)
         if (typeof data == 'object' && data['ApiKey']) delete data['ApiKey']
-        const json = { data: data, timestamp: false }
+        const json = { Data: data }
         if (options) {
-            if (options.jobId) json['ServerJobId'] = options.jobId
+            if (options.jobId) json['ServerJobId'] = options.jobId.toString()
             if (options.placeId) json['ServerPlaceId'] = options.placeId.toString()
+            if (options.eventName) json['EventName'] = options.eventName.toString()
         }
 
         const response = await this.sendData(JSON.stringify(json))
