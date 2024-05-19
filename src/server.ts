@@ -415,9 +415,7 @@ export class Server {
             axios.post(`https://apis.roblox.com/messaging-service/v1/universes/${this.universeId}/topics/RealTimeCommunicationsData`,
                 { message: data },
                 { headers: { 'x-api-key': this.robloxApiKey, 'Content-Type': 'application/json' } })
-                .then((res) => {
-                    resolve(res)
-                })
+                .then(resolve)
                 .catch((err) => {
                     resolve(err.response)
                 })
