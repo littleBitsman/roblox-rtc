@@ -1,4 +1,5 @@
 import express from 'express'
+import { Request, Response } from 'express'
 import axios, { AxiosResponse } from 'axios'
 import session from 'express-session'
 import { Collection } from '@discordjs/collection'
@@ -134,6 +135,11 @@ interface ListenOptions {
     passphrase?: string
 }
 
+function lazySend(res: express.Response, status: number, json?: any) {
+    res.status(status)
+    if (json) res.json(json)
+}
+
 function makeKey(length: number = 16) {
     var result = '';
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -155,8 +161,8 @@ export class Server {
     private readonly serverApiKey: string
     private readonly key: string | Buffer | (string | Buffer)[] | undefined = undefined
     private readonly cert: string | Buffer | (string | Buffer)[] | undefined = undefined
-    constructor(options?: CreateServerOptions) {
-        if (!options) throw new TypeError('You must specify options (universeId and robloxApiKey are required). Expected: object, got: undefined')
+    constructor(options: CreateServerOptions) {
+        if (typeof options != 'object') throw new TypeError(`You must specify options (universeId and robloxApiKey are required). Expected: object, got: ${typeof options}`)
         const universeId = options.universeId
         const key = options.robloxApiKey
         if (!options.serverKey) options.serverKey = makeKey(64)
@@ -193,17 +199,17 @@ export class Server {
             })
             res.sendStatus(204)
         })
-        this.router.post('/connect', async (req, res) => {
-            if (!req.get('API-Key') || req.get('API-Key')?.trim() != serverKey) return res.sendStatus(401)
+        this.router.post('/connect', async (req: Request, res: Response) => {
+            if (!req.get('API-Key') || req.get('API-Key')?.trim() != serverKey) return lazySend(res, 401)
             const JobId = req.get('Roblox-JobId')
-            if (!JobId) return res.sendStatus(400)
-            if (this.Connections.has(JobId)) return res.status(409).json({
+            if (!JobId) return lazySend(res, 400)
+            if (this.Connections.has(JobId)) return lazySend(res, 409, {
                 'error-code': 409,
                 error: 'This server (that made this request) has already requested a connection previously and has not closed it.'
             })
 
             const PlaceId = req.get('Roblox-PlaceId')
-            if (!PlaceId) return res.sendStatus(400)
+            if (!PlaceId) return lazySend(res, 400)
             const stream = new EventEmitter()
             const conn = new Connection({
                 JobId: JobId,
@@ -226,10 +232,10 @@ export class Server {
         })
         this.router.post('/servers/:serverId/internalData', (req, res) => {
             if (!this.validateRequest(req, res)) return
-            if (!req.get('data-type') || req.get('data-type') != 'internal') return res.sendStatus(400)
+            if (!req.get('data-type') || req.get('data-type') != 'internal') return lazySend(res, 400)
             const serverId = req.params.serverId
             const connection = this.getServerById(serverId)
-            if (!connection) return res.sendStatus(404)
+            if (!connection) return lazySend(res, 404)
             this.Streams.find((_, k) => k == connection.JobId)!.emit('internalData', req.body.data)
             res.sendStatus(204)
         })
@@ -237,7 +243,7 @@ export class Server {
             if (!this.validateRequest(req, res)) return
             const serverId = req.params.serverId
             const connection = this.getServerById(serverId)
-            if (!connection) return res.sendStatus(404)
+            if (!connection) return lazySend(res, 404)
             this.Streams.find((_, k) => k == connection.JobId)!.emit('data', req.body.data)
             res.sendStatus(204)
         })
@@ -245,7 +251,7 @@ export class Server {
             if (!this.validateRequest(req, res)) return 
             const serverId = req.params.serverId
             const connection = this.Connections.find((v) => v.id == serverId)
-            if (!connection) return res.sendStatus(404)
+            if (!connection) return lazySend(res, 404)
             this.Streams.find((_, k) => k == connection.JobId)!.emit('close')
             this.Connections.delete(connection.JobId)
             req.session.destroy(() => { })
@@ -253,6 +259,10 @@ export class Server {
         })
 
         this.app.use(this.router)
+    }
+
+    get servers() {
+        return this.Connections.map(v => v)
     }
 
     private validateRequest(req: express.Request, res: express.Response) {
@@ -381,7 +391,7 @@ export class Server {
     /**
      * Sends `data` to Roblox game servers via the Roblox Open Cloud Messaging Service. 
      * @async
-     * @param {object} data The data to send with the request. *`JSON.stringify()` is executed on this automatically, so there is no need to run it yourself.*
+     * @param {JSONable} data The data to send with the request. *`JSON.stringify()` is executed on this automatically, so there is no need to run it yourself.*
      * Note that if your data object has an `ApiKey` property, the `ApiKey` will be **deleted**.
      * A `timestamp` value is added automatically.
      * @param {DataSendOptions | undefined} options The options for the request. Note that if you do not specify any options, the data will be sent to ALL game servers.
@@ -440,10 +450,7 @@ export class Server {
         if (user instanceof Player) searchFor = user.id
         searchFor = searchFor.toString()
         if (isNaN(Number.parseFloat(searchFor))) throw new TypeError(`Expected userId to be a string or number, got ${typeof (user)}`)
-        axios.get(`https://users.roblox.com/v1/users/${searchFor}`).catch((reason) => {
-            if (reason.response.status == 404) throw 'Invalid userId.'
-        })
-        return this.Connections.find(conn => conn.players.find(id => searchFor == id) != undefined)
+        return this.Connections.find(conn => conn.players.find(id => searchFor == id.id) != undefined)
     }
 
     /**

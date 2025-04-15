@@ -90,7 +90,7 @@ export class Connection {
 
     /**
      * Send data to the server represented by this object. *Note: The* `jobId` *and* `placeId` *are handled for you.*
-     * @param {object} data The data to send.
+     * @param {JSONable} data The data to send.
      */
     async send(data: JSONable, eventName?: string) {
         return this.Server.send(data, {
