@@ -402,7 +402,7 @@ export class Server {
      * *WARNING: If you specify the wrong place ID and you specify a job ID, the message may not be received by the server you intended. The logic on the Roblox game server side checks BOTH place ID (when the filter exists) and job ID (when the filter exists).*
     */
     async send(data: JSONable, options?: DataSendOptions): Promise<void> {
-        if (!data) throw new TypeError('data must not be undefined/null')
+        if (data == undefined) throw new TypeError('data must not be undefined/null')
         if (isValidJsonString(data) && typeof data == 'string') data = JSON.parse(data)
         if (typeof data == 'object' && data['ApiKey']) delete data['ApiKey']
         const json = { Data: data }
